@@ -2,6 +2,10 @@ package server
 
 import (
 	"encoding/json"
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/opts"
+	"github.com/go-echarts/go-echarts/v2/types"
+	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
 	"math/rand"
@@ -9,11 +13,8 @@ import (
 	"net/url"
 	"qos-stats/biz"
 	"strconv"
-
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-	"github.com/go-echarts/go-echarts/v2/types"
-	"github.com/gorilla/websocket"
+	"sync"
+	"time"
 )
 
 func bweIndex(w http.ResponseWriter, r *http.Request) {
@@ -136,6 +137,7 @@ func wsStats(w http.ResponseWriter, r *http.Request) {
 	}
 	defer c.Close()
 
+	var mutex sync.Mutex
 	respFun := func(statsType string, streamId int, payload string, success bool) {
 		resp := wsStatsRespMessage{
 			StatsType: statsType,
@@ -144,6 +146,7 @@ func wsStats(w http.ResponseWriter, r *http.Request) {
 			Success:   success,
 		}
 
+		mutex.Lock()
 		if result, resErr := json.Marshal(resp); resErr == nil {
 			err = c.WriteMessage(1, result)
 			if err != nil {
@@ -152,13 +155,63 @@ func wsStats(w http.ResponseWriter, r *http.Request) {
 		} else {
 			log.Println("resErr", resErr)
 		}
+		mutex.Unlock()
 	}
 
 	log.Printf("New ws client, addr: %s", r.RemoteAddr)
+
+	isExit := false
+	go func() {
+		for !isExit {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := biz.BweStatsDraw()
+				respFun("bwe", -1, string(respData[:]), respErr == nil)
+			}
+		}
+	}()
+
+	go func() {
+		for !isExit {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := biz.TrendStatsDraw()
+				respFun("trend", -1, string(respData[:]), respErr == nil)
+			}
+		}
+	}()
+
+	go func() {
+		for !isExit {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := biz.FrameCostStatsDraw(0)
+				respFun("cost", 0, string(respData[:]), respErr == nil)
+				respData, respErr = biz.FrameCostStatsDraw(1)
+				respFun("cost", 1, string(respData[:]), respErr == nil)
+			}
+		}
+	}()
+
+	go func() {
+		for !isExit {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := biz.FrameCostStatsDraw(1)
+				respFun("cost", 1, string(respData[:]), respErr == nil)
+			}
+		}
+	}()
+
 	// 从WebSocket连接轮询消息
 	for {
 		_, message, err := c.ReadMessage()
 		if err != nil {
+			isExit = true
 			log.Printf("Ws read fail: %s", err.Error())
 			break
 		}
