@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Awesome go-echarts</title>
+    <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
+    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/chalk.js"></script>
+    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/essos.js"></script>
+    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/walden.js"></script>
+</head>
+
+<body>
+<div class="container">
+    <div class="item" id="bwe" style="width:900px;height:450px;"></div>
+    <div class="item" id="trend" style="width:900px;height:450px;"></div>
+    <div class="item" id="cost0" style="width:900px;height:450px;"></div>
+    <div class="item" id="cost1" style="width:900px;height:450px;"></div>
+</div>
+
+<script type="text/javascript">
+    "use strict";
+    let goEchartsBwe = echarts.init(document.getElementById('bwe'), "chalk");
+    let goEchartsTrend = echarts.init(document.getElementById('trend'), "chalk");
+    let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "chalk");
+    let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "chalk");
+</script>
+
+<style>
+    .container {
+        margin-top: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: left;
+    }
+
+    .item {
+        margin: 10px;
+    }
+
+    #bwe {
+        order: 1;
+    }
+
+    #trend {
+        order: 2;
+    }
+
+    #cost0 {
+        order: 3;
+    }
+
+    #cost1 {
+        order: 4;
+    }
+</style>
+
+<script>
+    let ws = null
+    window.onload = connectWS()
+    // WebSocket消息回调处理函数
+    function parseResponse(response) {
+        //console.log("Response:", response)
+        if (response.success !== true) {
+            console.log("response not success")
+            return
+        }
+
+        const data = JSON.parse(response.payload)
+        //console.log("Data:", data)
+        if (response.statsType === "bwe") {
+            goEchartsBwe.setOption(data)
+        } else if (response.statsType === "trend") {
+            goEchartsTrend.setOption(data)
+        } else if (response.statsType === "cost") {
+            if (response.streamId === 0) {
+                goEchartsCost0.setOption(data)
+            } else if (response.streamId === 1) {
+                goEchartsCost1.setOption(data)
+            }
+        }
+    }
+
+    // 连接WebSocket服务
+    async function connectWS() {
+        if (ws == null) {
+            ws = new WebSocket("ws://127.0.0.1:8090/ws/stats", "json")
+            console.log('***CREATED WEBSOCKET')
+        }
+
+        ws.onopen = function (evt) {
+            console.log('***ONOPEN')
+        }
+
+        // 注册WebSocket的消息回调处理函数
+        ws.onmessage = function (evt) {
+            console.log('***ONMESSAGE')
+            //console.log(evt.data)
+            //console.log(JSON.parse(evt.data))
+
+            parseResponse(JSON.parse(evt.data))
+        }
+    }
+
+    // 发送数据到WebSocket服务
+    function sendWS(type, streamId) {
+        console.log('***SEND')
+
+        let data = {}
+        data["statsType"] = type
+        if (streamId == null) {
+            data["streamId"] = -1
+        } else {
+            data["streamId"] = streamId
+        }
+        console.log(JSON.stringify(data))
+        ws.send(JSON.stringify(data))
+    }
+
+    // 关闭到WebSocket服务的连接
+    function closeWS() {
+        console.log('***CLOSE')
+        ws.close()
+    }
+
+    function getDataByHttp() {
+        fetch("/stats/bwe")
+            .then((response) => response.text())
+            .then((json) => {
+                if (json) {
+                    //console.log('json:', json);
+                    let data = JSON.parse(json);
+                    goEchartsBwe.setOption(data);
+                    //console.log('Received bwe data:', data);
+                } else {
+                    console.log("bwe error");
+                }
+            });
+        fetch("/stats/trend")
+            .then((response) => response.text())
+            .then((json) => {
+                if (json) {
+                    let data = JSON.parse(json);
+                    goEchartsTrend.setOption(data);
+                } else {
+                    console.log("trend error");
+                }
+            });
+        fetch("/stats/cost?stream_id=0")
+            .then((response) => response.text())
+            .then((json) => {
+                if (json) {
+                    let data = JSON.parse(json);
+                    goEchartsCost0.setOption(data);
+                } else {
+                    console.log("cost error");
+                }
+            });
+        fetch("/stats/cost?stream_id=1")
+            .then((response) => response.text())
+            .then((json) => {
+                if (json) {
+                    let data = JSON.parse(json);
+                    goEchartsCost1.setOption(data);
+                } else {
+                    console.log("cost error");
+                }
+            });
+    }
+    function getDataByWs() {
+        sendWS("bwe",null)
+        sendWS("trend",null)
+        sendWS("cost",0)
+        sendWS("cost",1)
+    }
+    setInterval(getDataByWs, 100);
+</script>
+
+</body>
+</html>
