@@ -83,7 +83,8 @@
     // 连接WebSocket服务
     async function connectWS() {
         if (ws == null) {
-            ws = new WebSocket("ws://127.0.0.1:8090/ws/stats", "json")
+            const ip = window.location.host;
+            ws = new WebSocket("ws://"+ip+"/ws/stats", "json")
             console.log('***CREATED WEBSOCKET')
         }
 
