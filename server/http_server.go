@@ -1,11 +1,9 @@
 package server
 
 import (
-	"encoding/json"
 	"github.com/go-echarts/go-echarts/v2/charts"
 	"github.com/go-echarts/go-echarts/v2/opts"
 	"github.com/go-echarts/go-echarts/v2/types"
-	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
 	"math/rand"
@@ -13,8 +11,6 @@ import (
 	"net/url"
 	"qos-stats/biz"
 	"strconv"
-	"sync"
-	"time"
 )
 
 func bweIndex(w http.ResponseWriter, r *http.Request) {
@@ -108,151 +104,6 @@ func echartsTest(w http.ResponseWriter, _ *http.Request) {
 	line.Render(w)
 }
 
-type wsStatsReqMessage struct {
-	StatsType string `json:"statsType"`
-	StreamId  int    `json:"streamId"`
-}
-
-type wsStatsRespMessage struct {
-	StatsType string `json:"statsType" `
-	StreamId  int    `json:"streamId"`
-	Payload   string `json:"payload"`
-
-	Success bool `json:"success"` // 标志WebSocket请求是否成功，仅给Web客户端回复时有效
-}
-
-func wsStats(w http.ResponseWriter, r *http.Request) {
-	var upgrader = websocket.Upgrader{
-		Subprotocols: []string{"json"},
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		}, // 关闭请求源地址检查
-	}
-
-	// 升级连接协议到WebSocket
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Printf("Upgrade to websocket fail: %s", err.Error())
-		return
-	}
-	defer c.Close()
-
-	var mutex sync.Mutex
-	respFun := func(statsType string, streamId int, payload string, success bool) {
-		resp := wsStatsRespMessage{
-			StatsType: statsType,
-			StreamId:  streamId,
-			Payload:   payload,
-			Success:   success,
-		}
-
-		mutex.Lock()
-		if result, resErr := json.Marshal(resp); resErr == nil {
-			err = c.WriteMessage(1, result)
-			if err != nil {
-				log.Println("respErr", err)
-			}
-		} else {
-			log.Println("resErr", resErr)
-		}
-		mutex.Unlock()
-	}
-
-	log.Printf("New ws client, addr: %s", r.RemoteAddr)
-
-	isExit := false
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := biz.BweStatsDraw()
-				respFun("bwe", -1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := biz.TrendStatsDraw()
-				respFun("trend", -1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := biz.FrameCostStatsDraw(0)
-				respFun("cost", 0, string(respData[:]), respErr == nil)
-				respData, respErr = biz.FrameCostStatsDraw(1)
-				respFun("cost", 1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := biz.FrameCostStatsDraw(1)
-				respFun("cost", 1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	// 从WebSocket连接轮询消息
-	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			isExit = true
-			log.Printf("Ws read fail: %s", err.Error())
-			break
-		}
-
-		log.Printf("Ws recv: %s", string(message))
-
-		var statsMsg = wsStatsReqMessage{}
-		err = json.Unmarshal(message, &statsMsg)
-		if err != nil {
-			log.Printf("Unmarshal fail: %s", err.Error())
-			return
-		}
-		var respErr error = nil
-		var respData []byte
-		switch statsMsg.StatsType {
-		case "stats":
-			respData, respErr = biz.BweStatsDraw()
-			respFun("bwe", -1, string(respData[:]), respErr == nil)
-			respData, respErr = biz.TrendStatsDraw()
-			respFun("trend", -1, string(respData[:]), respErr == nil)
-			respData, respErr = biz.FrameCostStatsDraw(0)
-			respFun("cost", 0, string(respData[:]), respErr == nil)
-			respData, respErr = biz.FrameCostStatsDraw(1)
-			respFun("cost", 1, string(respData[:]), respErr == nil)
-		case "bwe":
-			respData, respErr = biz.BweStatsDraw()
-			respFun("bwe", -1, string(respData[:]), respErr == nil)
-		case "trend":
-			respData, respErr = biz.TrendStatsDraw()
-			respFun("trend", -1, string(respData[:]), respErr == nil)
-		case "cost":
-			respData, respErr = biz.FrameCostStatsDraw(uint8(statsMsg.StreamId))
-			respFun("cost", statsMsg.StreamId, string(respData[:]), respErr == nil)
-		}
-
-		if respErr != nil {
-			log.Println("respErr", respErr)
-		}
-	}
-}
-
 func HttpStart() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/test", echartsTest)
@@ -263,7 +114,8 @@ func HttpStart() {
 	mux.HandleFunc("/stats/cost", statsCost)
 	mux.HandleFunc("/stats/bwe", statsBwe)
 	mux.HandleFunc("/stats/trend", statsTrend)
-	mux.HandleFunc("/ws/stats", wsStats)
+	mux.HandleFunc("/ws/stats", biz.WsStats)
+	mux.HandleFunc("/ws/tc", biz.WsTc)
 
 	s := &http.Server{
 		Addr:    "0.0.0.0:8090",

@@ -122,50 +122,6 @@
         ws.close()
     }
 
-    function getDataByHttp() {
-        fetch("/stats/bwe")
-            .then((response) => response.text())
-            .then((json) => {
-                if (json) {
-                    //console.log('json:', json);
-                    let data = JSON.parse(json);
-                    goEchartsBwe.setOption(data);
-                    //console.log('Received bwe data:', data);
-                } else {
-                    console.log("bwe error");
-                }
-            });
-        fetch("/stats/trend")
-            .then((response) => response.text())
-            .then((json) => {
-                if (json) {
-                    let data = JSON.parse(json);
-                    goEchartsTrend.setOption(data);
-                } else {
-                    console.log("trend error");
-                }
-            });
-        fetch("/stats/cost?stream_id=0")
-            .then((response) => response.text())
-            .then((json) => {
-                if (json) {
-                    let data = JSON.parse(json);
-                    goEchartsCost0.setOption(data);
-                } else {
-                    console.log("cost error");
-                }
-            });
-        fetch("/stats/cost?stream_id=1")
-            .then((response) => response.text())
-            .then((json) => {
-                if (json) {
-                    let data = JSON.parse(json);
-                    goEchartsCost1.setOption(data);
-                } else {
-                    console.log("cost error");
-                }
-            });
-    }
     function getDataByWs() {
         sendWS("bwe",null)
         sendWS("trend",null)
