@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"qos-stats/conf"
 	"strconv"
@@ -230,7 +229,7 @@ func FrameCostStatsDraw(streamId uint8) ([]byte, error) {
 		}
 
 		if totalCost > 500 {
-			log.Printf("TotalCost | [%d] cost [%d]", unit.seq, totalCost)
+			//log.Printf("TotalCost | [%d] cost [%d]", unit.seq, totalCost)
 		}
 
 		if unit.enqueueTime != 0 {
