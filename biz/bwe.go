@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"qos-stats/conf"
-	"strconv"
 	"sync"
 	"time"
 
@@ -104,7 +103,7 @@ func BweStatsDraw() ([]byte, error) {
 
 	BweStatsMutex.RLock()
 	for _, stats := range BweStatsQueue {
-		xAxis = append(xAxis, strconv.Itoa(int(stats.CreateTime)))
+		xAxis = append(xAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.RealBandwidth})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.ThroughputEstimator})
 		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.ProbeEstimator})
