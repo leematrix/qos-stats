@@ -8,7 +8,6 @@ import (
 	"github.com/go-echarts/go-echarts/v2/types"
 	"math"
 	"qos-stats/conf"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -79,7 +78,7 @@ func TrendStatsDraw() ([]byte, error) {
 
 	TrendStatsMutex.RLock()
 	for _, stats := range TrendStatsQueue {
-		xAxis = append(xAxis, strconv.Itoa(int(stats.CreateTime)))
+		xAxis = append(xAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Threshold})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.ModifiedTrend})
 		YAxis[2] = append(YAxis[2], opts.LineData{Value: -stats.Threshold})
