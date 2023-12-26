@@ -44,7 +44,7 @@ func bweStatsStart() {
 				startTime = time.Now().UnixMilli()
 			}
 			stats := BweStats{
-				CreateTime: time.Now().UnixMilli(), //- startTime,
+				CreateTime: time.Now().Unix(), //- startTime,
 			}
 
 			index := 0
@@ -84,20 +84,24 @@ func BweStatsIncoming(msg []byte) {
 }
 
 func BweStatsDraw() ([]byte, error) {
-	now := time.Now().UnixMilli()
+	//now := time.Now().UnixMilli()
 	xAxis := make([]string, 0)
 	YAxis := make([][]opts.LineData, 5)
 
 	BweStatsMutex.Lock()
 	start := 0
-	for i := 0; i < len(BweStatsQueue); i++ {
-		if now-BweStatsQueue[i].CreateTime > conf.StatsWindowsTimeMs &&
-			len(BweStatsQueue) > conf.StatsWindowsCount {
-			start = i
-		} else {
-			break
-		}
+	if len(BweStatsQueue) > conf.StatsWindowsCount {
+		start = len(BweStatsQueue) - conf.StatsWindowsCount
 	}
+	/*
+	   for i := 0; i < len(BweStatsQueue); i++ {
+	           if (now-BweStatsQueue[i].CreateTime) > conf.StatsWindowsTimeMs/1000 && len(BweStatsQueue)>conf.StatsWindowsCount{
+	                   start = i
+	           } else {
+	                   break
+	           }
+	   }*/
+
 	BweStatsQueue = BweStatsQueue[start:]
 	BweStatsMutex.Unlock()
 

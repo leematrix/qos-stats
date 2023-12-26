@@ -32,7 +32,7 @@ func trendStatsStart() {
 				startTime = time.Now().UnixMilli()
 			}
 			stats := TrendStats{
-				CreateTime: time.Now().UnixMilli(), //- startTime,
+				CreateTime: time.Now().Unix(), //- startTime,
 			}
 
 			index := 0
@@ -54,28 +54,31 @@ func TrendStatsIncoming(msg []byte) {
 }
 
 func TrendStatsDraw() ([]byte, error) {
-	now := time.Now().UnixMilli()
+	//now := time.Now().UnixMilli()
 	xAxis := make([]string, 0)
 	YAxis := make([][]opts.LineData, 3)
 
 	TrendStatsMutex.Lock()
 	start := 0
-	for i := 0; i < len(TrendStatsQueue); i++ {
-		if now-TrendStatsQueue[i].CreateTime > conf.StatsWindowsTimeMs &&
-			len(TrendStatsQueue) > conf.StatsWindowsCount*1000 {
-			start = i
-		} else {
-			break
-		}
+	count := conf.StatsWindowsCount * 10000
+	if len(BweStatsQueue) > count {
+		start = len(BweStatsQueue) - count
 	}
+	/*
+	   for i := 0; i < len(TrendStatsQueue); i++ {
+	           if now-TrendStatsQueue[i].CreateTime > conf.StatsWindowsTimeMs &&
+	                   len(TrendStatsQueue) > conf.StatsWindowsCount*1000 {
+	                   start = i
+	           } else {
+	                   break
+	           }
+	   }
+	*/
 	TrendStatsQueue = TrendStatsQueue[start:]
 	TrendStatsMutex.Unlock()
 
 	TrendStatsMutex.RLock()
 	for _, stats := range TrendStatsQueue {
-		if now-stats.CreateTime > conf.StatsWindowsTimeMs {
-			continue
-		}
 		xAxis = append(xAxis, strconv.Itoa(int(stats.CreateTime)))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Threshold})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.ModifiedTrend})
