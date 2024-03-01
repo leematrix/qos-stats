@@ -219,6 +219,7 @@ func WsTc(w http.ResponseWriter, r *http.Request) {
 }
 
 func Start() {
+	go TraceStart()
 	go bweStatsStart()
 	go costStatsStart()
 	go trendStatsStart()

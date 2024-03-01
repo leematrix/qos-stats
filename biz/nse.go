@@ -69,12 +69,17 @@ func nseStatsStart() {
 			NseStatsMutex.Lock()
 			NseStatsQueue = append(NseStatsQueue, stats)
 			NseStatsMutex.Unlock()
+
+			TraceIncoming(stats)
 		}
 	}
 }
 
 func NSEIncoming(msg []byte) {
-	nseStatsChan <- msg
+	select {
+	case nseStatsChan <- msg:
+	default:
+	}
 }
 
 func NseStatsDraw() ([]byte, error) {
