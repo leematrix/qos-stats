@@ -92,7 +92,7 @@ func NseStatsDraw() ([]byte, error) {
 
 	NseStatsMutex.RLock()
 	for _, stats := range NseStatsQueue {
-		xAxis = append(xAxis, time.Unix(stats.Ts, 0).Format("04:05.123"))
+		xAxis = append(xAxis, time.UnixMilli(stats.Ts).Format("15:04:05"))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Rtt})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.MinRtt})
 		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.UpDelay})
