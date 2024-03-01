@@ -41,7 +41,10 @@ func SignalServerStart() {
 				biz.FrameStatsIncoming(buf[1:])
 			case biz.TypeDelayTrendStats:
 				biz.TrendStatsIncoming(buf[1:])
+			case biz.TypeNSEStats:
+				biz.NSEIncoming(buf[1:])
 			case biz.TypeReset:
+				biz.NseReset()
 				biz.BweStatsReset()
 				biz.CostStatsReset()
 				biz.TrendStatsReset()

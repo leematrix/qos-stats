@@ -11,18 +11,21 @@
 
 <body>
 <div class="container">
-    <div class="item" id="bwe" style="width:900px;height:450px;"></div>
-    <div class="item" id="trend" style="width:900px;height:450px;"></div>
-    <div class="item" id="cost0" style="width:900px;height:450px;"></div>
-    <div class="item" id="cost1" style="width:900px;height:450px;"></div>
+    <div class="item" id="nse" style="width:900px;height:450px;"></div>
+<!--    <div class="item" id="stats" style="width:900px;height:450px;"></div>-->
+<!--    <div class="item" id="bwe" style="width:900px;height:450px;"></div>-->
+<!--    <div class="item" id="trend" style="width:900px;height:450px;"></div>-->
+<!--    <div class="item" id="cost0" style="width:900px;height:450px;"></div>-->
+<!--    <div class="item" id="cost1" style="width:900px;height:450px;"></div>-->
 </div>
 
 <script type="text/javascript">
     "use strict";
-    let goEchartsBwe = echarts.init(document.getElementById('bwe'), "chalk");
-    let goEchartsTrend = echarts.init(document.getElementById('trend'), "chalk");
-    let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "chalk");
-    let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "chalk");
+    let goEchartsNse = echarts.init(document.getElementById('nse'), "chalk");
+    // let goEchartsBwe = echarts.init(document.getElementById('bwe'), "chalk");
+    // let goEchartsTrend = echarts.init(document.getElementById('trend'), "chalk");
+    // let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "chalk");
+    // let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "chalk");
 </script>
 
 <style>
@@ -66,16 +69,18 @@
         }
 
         const data = JSON.parse(response.payload)
-        //console.log("Data:", data)
-        if (response.statsType === "bwe") {
-            goEchartsBwe.setOption(data)
+        console.log("Data:", data)
+        if (response.statsType === "nse") {
+            goEchartsNse.setOption(data)
+        } else if (response.statsType === "bwe-all") {
+            //goEchartsBwe.setOption(data)
         } else if (response.statsType === "trend") {
-            goEchartsTrend.setOption(data)
+            //goEchartsTrend.setOption(data)
         } else if (response.statsType === "cost") {
             if (response.streamId === 0) {
-                goEchartsCost0.setOption(data)
+                //goEchartsCost0.setOption(data)
             } else if (response.streamId === 1) {
-                goEchartsCost1.setOption(data)
+                //goEchartsCost1.setOption(data)
             }
         }
     }
@@ -128,6 +133,7 @@
         sendWS("trend",null)
         sendWS("cost",0)
         sendWS("cost",1)
+        sendWS("nse",null)
     }
     //setInterval(getDataByWs, 100);
 </script>

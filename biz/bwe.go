@@ -27,7 +27,6 @@ type BweStats struct {
 	RecvQueueLen        int
 }
 
-var bweMutex sync.Mutex
 var realBandwidthKBPS int = 0
 var recvQueueLen = 0
 var bweChan = make(chan []byte, 1024)

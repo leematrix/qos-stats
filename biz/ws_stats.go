@@ -14,6 +14,7 @@ const (
 	TypeTransportStats  = 1
 	TypeFrameStats      = 2
 	TypeDelayTrendStats = 3
+	TypeNSEStats        = 4
 	TypeReset           = 255
 )
 
@@ -70,48 +71,59 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New ws client, addr: %s", r.RemoteAddr)
 
 	isExit := false
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := BweStatsDraw()
-				respFun("bwe", -1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
+	//go func() {
+	//	for !isExit {
+	//		ticker := time.NewTicker(500 * time.Millisecond)
+	//		select {
+	//		case <-ticker.C:
+	//			respData, respErr := BweStatsDraw()
+	//			respFun("bwe", -1, string(respData[:]), respErr == nil)
+	//		}
+	//	}
+	//}()
+	//
+	//go func() {
+	//	for !isExit {
+	//		ticker := time.NewTicker(500 * time.Millisecond)
+	//		select {
+	//		case <-ticker.C:
+	//			respData, respErr := TrendStatsDraw()
+	//			respFun("trend", -1, string(respData[:]), respErr == nil)
+	//		}
+	//	}
+	//}()
+	//
+	//go func() {
+	//	for !isExit {
+	//		ticker := time.NewTicker(500 * time.Millisecond)
+	//		select {
+	//		case <-ticker.C:
+	//			respData, respErr := FrameCostStatsDraw(0)
+	//			respFun("cost", 0, string(respData[:]), respErr == nil)
+	//			respData, respErr = FrameCostStatsDraw(1)
+	//			respFun("cost", 1, string(respData[:]), respErr == nil)
+	//		}
+	//	}
+	//}()
+	//
+	//go func() {
+	//	for !isExit {
+	//		ticker := time.NewTicker(500 * time.Millisecond)
+	//		select {
+	//		case <-ticker.C:
+	//			respData, respErr := FrameCostStatsDraw(1)
+	//			respFun("cost", 1, string(respData[:]), respErr == nil)
+	//		}
+	//	}
+	//}()
 
 	go func() {
 		for !isExit {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := TrendStatsDraw()
-				respFun("trend", -1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := FrameCostStatsDraw(0)
-				respFun("cost", 0, string(respData[:]), respErr == nil)
-				respData, respErr = FrameCostStatsDraw(1)
-				respFun("cost", 1, string(respData[:]), respErr == nil)
-			}
-		}
-	}()
-
-	go func() {
-		for !isExit {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
-				respData, respErr := FrameCostStatsDraw(1)
-				respFun("cost", 1, string(respData[:]), respErr == nil)
+				respData, respErr := NseStatsDraw()
+				respFun("nse", 255, string(respData[:]), respErr == nil)
 			}
 		}
 	}()
@@ -136,7 +148,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		var respErr error = nil
 		var respData []byte
 		switch statsMsg.StatsType {
-		case "stats":
+		case "bwe-all":
 			respData, respErr = BweStatsDraw()
 			respFun("bwe", -1, string(respData[:]), respErr == nil)
 			respData, respErr = TrendStatsDraw()
@@ -154,6 +166,9 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		case "cost":
 			respData, respErr = FrameCostStatsDraw(uint8(statsMsg.StreamId))
 			respFun("cost", statsMsg.StreamId, string(respData[:]), respErr == nil)
+		case "nse":
+			respData, respErr = NseStatsDraw()
+			respFun("nse", 255, string(respData[:]), respErr == nil)
 		}
 
 		if respErr != nil {
@@ -207,4 +222,5 @@ func Start() {
 	go bweStatsStart()
 	go costStatsStart()
 	go trendStatsStart()
+	go nseStatsStart()
 }
