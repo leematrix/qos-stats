@@ -16,9 +16,9 @@ type NseStats struct {
 	Rtt           uint32 `json:"rtt"`
 	SRtt          uint32 `json:"sRtt"`
 	MinRtt        uint32 `json:"minRTT"`
-	UpDelay       uint32 `json:"upDelay"`
-	UpDelayJitter uint32 `json:"upDelayJitter"`
-	SUpDelay      uint32 `json:"sUpDelay"`
+	UpDelay       int32  `json:"upDelay"`
+	UpDelayJitter int32  `json:"upDelayJitter"`
+	SUpDelay      int32  `json:"sUpDelay"`
 	LossRate      uint8  `json:"lossRate"`
 	Ts            int64  `json:"ts"`
 	CreateTime    int64
@@ -52,10 +52,10 @@ func nseStatsStart() {
 			stats.MinRtt = binary.BigEndian.Uint32(msg[index:])
 			index += 4
 
-			stats.UpDelay = binary.BigEndian.Uint32(msg[index:])
+			stats.UpDelay = int32(binary.BigEndian.Uint32(msg[index:]))
 			index += 4
 
-			stats.SUpDelay = binary.BigEndian.Uint32(msg[index:])
+			stats.SUpDelay = int32(binary.BigEndian.Uint32(msg[index:]))
 			index += 4
 
 			stats.LossRate = msg[index]
@@ -92,7 +92,7 @@ func NseStatsDraw() ([]byte, error) {
 
 	NseStatsMutex.RLock()
 	for _, stats := range NseStatsQueue {
-		xAxis = append(xAxis, time.Unix(stats.Ts, 0).Format("15:04:05"))
+		xAxis = append(xAxis, time.Unix(stats.Ts, 0).Format("04:05.123"))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Rtt})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.MinRtt})
 		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.UpDelay})
