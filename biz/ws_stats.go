@@ -71,16 +71,17 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New ws client, addr: %s", r.RemoteAddr)
 
 	isExit := false
-	//go func() {
-	//	for !isExit {
-	//		ticker := time.NewTicker(500 * time.Millisecond)
-	//		select {
-	//		case <-ticker.C:
-	//			respData, respErr := BweStatsDraw()
-	//			respFun("bwe", -1, string(respData[:]), respErr == nil)
-	//		}
-	//	}
-	//}()
+	go func() {
+		for !isExit {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := BweStatsDraw()
+				respFun("bwe", -1, string(respData[:]), respErr == nil)
+			}
+		}
+	}()
+
 	//
 	//go func() {
 	//	for !isExit {

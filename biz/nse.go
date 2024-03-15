@@ -13,14 +13,16 @@ import (
 )
 
 type NseStats struct {
-	Rtt           uint32 `json:"rtt"`
-	SRtt          uint32 `json:"sRtt"`
-	MinRtt        uint32 `json:"minRTT"`
-	UpDelay       int32  `json:"upDelay"`
-	UpDelayJitter int32  `json:"upDelayJitter"`
-	SUpDelay      int32  `json:"sUpDelay"`
-	LossRate      uint8  `json:"lossRate"`
-	Ts            int64  `json:"ts"`
+	Rtt           uint32  `json:"rtt"`
+	SRtt          uint32  `json:"sRtt"`
+	MinRtt        uint32  `json:"minRTT"`
+	UpDelay       int32   `json:"upDelay"`
+	UpDelayJitter int32   `json:"upDelayJitter"`
+	SUpDelay      int32   `json:"sUpDelay"`
+	Slope         float64 `json:"slope"`
+	Variance      float64 `json:"variance"`
+	LossRate      uint8   `json:"lossRate"`
+	Ts            int64   `json:"ts"`
 	CreateTime    int64
 	RecvQueueLen  int
 }
@@ -39,7 +41,7 @@ func nseStatsStart() {
 				startTime = time.Now().UnixMilli()
 			}
 			stats := NseStats{
-				CreateTime: time.Now().Unix(), //- startTime,
+				CreateTime: time.Now().UnixMilli(), //- startTime,
 			}
 
 			index := 0
@@ -57,6 +59,12 @@ func nseStatsStart() {
 
 			stats.SUpDelay = int32(binary.BigEndian.Uint32(msg[index:]))
 			index += 4
+
+			stats.Slope = float64(binary.BigEndian.Uint64(msg[index:]))
+			index += 8
+
+			stats.Variance = float64(binary.BigEndian.Uint64(msg[index:]))
+			index += 8
 
 			stats.LossRate = msg[index]
 			index += 1
@@ -84,7 +92,7 @@ func NSEIncoming(msg []byte) {
 
 func NseStatsDraw() ([]byte, error) {
 	xAxis := make([]string, 0)
-	YAxis := make([][]opts.LineData, 5)
+	YAxis := make([][]opts.LineData, 7)
 
 	NseStatsMutex.Lock()
 	start := 0
@@ -97,12 +105,14 @@ func NseStatsDraw() ([]byte, error) {
 
 	NseStatsMutex.RLock()
 	for _, stats := range NseStatsQueue {
-		xAxis = append(xAxis, time.UnixMilli(stats.Ts).Format("15:04:05"))
+		xAxis = append(xAxis, time.UnixMilli(stats.CreateTime).Format("15:04:05"))
 		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Rtt})
 		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.MinRtt})
 		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.UpDelay})
 		YAxis[3] = append(YAxis[3], opts.LineData{Value: stats.SUpDelay})
-		YAxis[4] = append(YAxis[4], opts.LineData{Value: stats.LossRate})
+		YAxis[4] = append(YAxis[4], opts.LineData{Value: stats.Slope})
+		YAxis[5] = append(YAxis[5], opts.LineData{Value: stats.Variance})
+		YAxis[6] = append(YAxis[6], opts.LineData{Value: stats.LossRate})
 	}
 	NseStatsMutex.RUnlock()
 
@@ -122,9 +132,11 @@ func NseStatsDraw() ([]byte, error) {
 		AddSeries("MinRtt", YAxis[1]).
 		AddSeries("UpDelay", YAxis[2]).
 		AddSeries("SUpDelay", YAxis[3]).
-		AddSeries("Loss", YAxis[4]).
+		AddSeries("Slope", YAxis[4]).
+		AddSeries("Variance", YAxis[5]).
+		AddSeries("Loss", YAxis[6]).
 		SetSeriesOptions(
-			charts.WithLineChartOpts(opts.LineChart{Smooth: true, ShowSymbol: false}),
+			charts.WithLineChartOpts(opts.LineChart{Smooth: false, ShowSymbol: false}),
 			charts.WithLabelOpts(opts.Label{Show: true}))
 	line.Validate()
 	return json.Marshal(line.JSON())
