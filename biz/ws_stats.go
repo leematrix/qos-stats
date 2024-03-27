@@ -135,22 +135,6 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := FrameCostStatsDraw(1)
-				err = respFun("cost", 1, string(respData[:]), respErr == nil)
-				if err != nil {
-					return err
-				}
-			case <-ctx.Done():
-				return nil
-			}
-		}
-	})
-
-	eg.Go(func() error {
-		for {
-			ticker := time.NewTicker(500 * time.Millisecond)
-			select {
-			case <-ticker.C:
 				respData, respErr := NseStatsDraw()
 				err = respFun("nse", 255, string(respData[:]), respErr == nil)
 				if err != nil {
