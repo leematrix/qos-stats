@@ -109,6 +109,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 	})
 
 	eg.Go(func() error {
+		return nil
 		for {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
