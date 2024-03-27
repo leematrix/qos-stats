@@ -31,15 +31,11 @@ var NseStatsQueue = make([]NseStats, 0)
 var NseStatsMutex sync.RWMutex
 
 func nseStatsStart() {
-	var startTime int64 = 0
 	for {
 		select {
 		case msg := <-nseStatsChan:
-			if startTime == 0 {
-				startTime = time.Now().UnixMilli()
-			}
 			stats := NseStats{
-				CreateTime: time.Now().UnixMilli(), //- startTime,
+				CreateTime: time.Now().Unix(),
 			}
 
 			index := 0
