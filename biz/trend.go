@@ -3,9 +3,6 @@ package biz
 import (
 	"encoding/binary"
 	"encoding/json"
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-	"github.com/go-echarts/go-echarts/v2/types"
 	"math"
 	"qos-stats/conf"
 	"sync"
@@ -23,15 +20,11 @@ var TrendStatsQueue = make([]TrendStats, 0)
 var TrendStatsMutex sync.RWMutex
 
 func trendStatsStart() {
-	var startTime int64 = 0
 	for {
 		select {
 		case msg := <-TrendStatsChan:
-			if startTime == 0 {
-				startTime = time.Now().UnixMilli()
-			}
 			stats := TrendStats{
-				CreateTime: time.Now().Unix(), //- startTime,
+				CreateTime: time.Now().Unix(),
 			}
 
 			index := 0
@@ -53,47 +46,25 @@ func TrendStatsIncoming(msg []byte) {
 }
 
 func TrendStatsDraw() ([]byte, error) {
-	xAxis := make([]string, 0)
-	YAxis := make([][]opts.LineData, 3)
-
-	start := 0
-	count := conf.StatsWindowsCount
 	TrendStatsMutex.Lock()
-	if len(TrendStatsQueue) > count {
-		start = len(TrendStatsQueue) - count
+	if len(TrendStatsQueue) > conf.StatsWindowsCount {
+		start := len(TrendStatsQueue) - conf.StatsWindowsCount
 		TrendStatsQueue = TrendStatsQueue[start:]
 	}
 	TrendStatsMutex.Unlock()
 
+	data := statsData{
+		Series: [][]float64{{}, {}, {}},
+	}
 	TrendStatsMutex.RLock()
 	for _, stats := range TrendStatsQueue {
-		xAxis = append(xAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
-		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Threshold})
-		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.ModifiedTrend})
-		YAxis[2] = append(YAxis[2], opts.LineData{Value: -stats.Threshold})
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.Threshold)
+		data.Series[1] = append(data.Series[1], stats.ModifiedTrend)
+		data.Series[2] = append(data.Series[2], -stats.Threshold)
 	}
 	TrendStatsMutex.RUnlock()
-
-	var line = charts.NewLine()
-	line.SetGlobalOptions(
-		charts.WithInitializationOpts(opts.Initialization{
-			Theme:  types.ThemeShine,
-			Width:  "1000px",
-			Height: "500px"}),
-		charts.WithTitleOpts(opts.Title{
-			Title:    "Qos Stats",
-			Subtitle: "Delay Trend",
-		}),
-	)
-	line.SetXAxis(xAxis).
-		AddSeries("ThresholdUpper", YAxis[0]).
-		AddSeries("Trend", YAxis[1]).
-		AddSeries("ThresholdLower", YAxis[2]).
-		SetSeriesOptions(
-			charts.WithLineChartOpts(opts.LineChart{Smooth: true, ShowSymbol: false}),
-			charts.WithLabelOpts(opts.Label{Show: true}))
-	line.Validate()
-	return json.Marshal(line.JSON())
+	return json.Marshal(data)
 }
 
 func TrendStatsReset() {

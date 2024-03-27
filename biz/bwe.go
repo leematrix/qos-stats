@@ -6,10 +6,6 @@ import (
 	"qos-stats/conf"
 	"sync"
 	"time"
-
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-	"github.com/go-echarts/go-echarts/v2/types"
 )
 
 type BweStats struct {
@@ -35,15 +31,11 @@ var BweStatsQueue = make([]BweStats, 0)
 var BweStatsMutex sync.RWMutex
 
 func bweStatsStart() {
-	var startTime int64 = 0
 	for {
 		select {
 		case msg := <-bweChan:
-			if startTime == 0 {
-				startTime = time.Now().UnixMilli()
-			}
 			stats := BweStats{
-				CreateTime: time.Now().Unix(), //- startTime,
+				CreateTime: time.Now().Unix(),
 			}
 
 			index := 0
@@ -83,50 +75,25 @@ func BweStatsIncoming(msg []byte) {
 }
 
 func BweStatsDraw() ([]byte, error) {
-	xAxis := make([]string, 0)
-	YAxis := make([][]opts.LineData, 5)
-
-	start := 0
 	BweStatsMutex.Lock()
 	if len(BweStatsQueue) > conf.StatsWindowsCount {
-		start = len(BweStatsQueue) - conf.StatsWindowsCount
+		start := len(BweStatsQueue) - conf.StatsWindowsCount
 		BweStatsQueue = BweStatsQueue[start:]
 	}
 	BweStatsMutex.Unlock()
 
+	data := statsData{
+		Series: [][]float64{{}, {}, {}},
+	}
 	BweStatsMutex.RLock()
 	for _, stats := range BweStatsQueue {
-		xAxis = append(xAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
-		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.RealBandwidth})
-		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.ThroughputEstimator})
-		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.ProbeEstimator})
-		YAxis[3] = append(YAxis[3], opts.LineData{Value: stats.FinalBasedBwe})
-		YAxis[4] = append(YAxis[4], opts.LineData{Value: stats.RecvQueueLen})
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.ThroughputEstimator)
+		data.Series[1] = append(data.Series[1], stats.ProbeEstimator)
+		data.Series[2] = append(data.Series[2], stats.FinalBasedBwe)
 	}
 	BweStatsMutex.RUnlock()
-
-	var line = charts.NewLine()
-	line.SetGlobalOptions(
-		charts.WithInitializationOpts(opts.Initialization{
-			Theme:  types.ThemeShine,
-			Width:  "1000px",
-			Height: "500px"}),
-		charts.WithTitleOpts(opts.Title{
-			Title:    "Qos Stats",
-			Subtitle: "Bwe",
-		}),
-	)
-	line.SetXAxis(xAxis).
-		AddSeries("Real", YAxis[0]).
-		AddSeries("Throughput", YAxis[1]).
-		AddSeries("Probe", YAxis[2]).
-		AddSeries("Target", YAxis[3]).
-		AddSeries("Queue", YAxis[4]).
-		SetSeriesOptions(
-			charts.WithLineChartOpts(opts.LineChart{Smooth: true, ShowSymbol: false}),
-			charts.WithLabelOpts(opts.Label{Show: true}))
-	line.Validate()
-	return json.Marshal(line.JSON())
+	return json.Marshal(data)
 }
 
 func BweStatsReset() {

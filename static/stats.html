@@ -1,118 +1,334 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>Awesome go-echarts</title>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/roma"></script>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Document</title>
+  <style>
+    .box {
+      width: 300px;
+      height: 300px;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.2/echarts.min.js"></script>
 </head>
-
 <body>
+
 <div class="container">
-    <div class="item" id="bwe" style="width:900px;height:450px;"></div>
-    <div class="item" id="trend" style="width:900px;height:450px;"></div>
-    <div class="item" id="cost0" style="width:900px;height:450px;"></div>
-    <div class="item" id="cost1" style="width:900px;height:450px;"></div>
-    <div class="item" id="nse" style="width:900px;height:450px;"></div>
+  <div class="item" id="bwe" style="width:900px;height:450px;"></div>
+  <div class="item" id="trend" style="width:900px;height:450px;"></div>
+  <div class="item" id="cost0" style="width:900px;height:450px;"></div>
+  <div class="item" id="cost1" style="width:900px;height:450px;"></div>
+  <div class="item" id="nse" style="width:900px;height:450px;"></div>
 </div>
 
 <script type="text/javascript">
-    "use strict";
-    let goEchartsBwe = echarts.init(document.getElementById('bwe'), "roma");
-    let goEchartsTrend = echarts.init(document.getElementById('trend'), "roma");
-    let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "roma");
-    let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "roma");
-    let goEchartsNse = echarts.init(document.getElementById('nse'), "roma");
+  "use strict";
+  const bweEcharts = echarts.init(document.getElementById('bwe'));
+  const trendEcharts = echarts.init(document.getElementById('trend'));
+  const cost0Echarts = echarts.init(document.getElementById('cost0'));
+  const cost1Echarts = echarts.init(document.getElementById('cost1'));
+  const nseEcharts = echarts.init(document.getElementById('nse'));
 </script>
 
 <style>
-    .container {
-        margin-top: 10px;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: left;
-    }
+  .container {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: left;
+  }
 
-    .item {
-        margin: 10px;
-    }
+  .item {
+    margin: 10px;
+  }
 
-    #bwe {
-        order: 1;
-    }
+  #bwe {
+    order: 1;
+  }
 
-    #trend {
-        order: 2;
-    }
+  #trend {
+    order: 2;
+  }
 
-    #cost0 {
-        order: 3;
-    }
+  #cost0 {
+    order: 3;
+  }
 
-    #cost1 {
-        order: 4;
-    }
+  #cost1 {
+    order: 4;
+  }
 
-    #nse {
-        order: 5;
-    }
+  #nse {
+    order: 5;
+  }
 </style>
 
 <script>
-    let ws = null
-    window.onload = connectWS()
-    // WebSocket消息回调处理函数
-    function parseResponse(response) {
-        //console.log("Response:", response)
-        if (response.success !== true) {
-            console.log("response not success")
-            return
-        }
+  const bweOption = {
+    title: {
+      text: "Qos Stats Bwe",
+    },
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: ["Throughput", "Probe", "Bandwidth"],
+    },
+    dataZoom: [
+      {
+        type: 'slider'
+      },
+      {
+        type: 'inside'
+      }
+    ],
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      }
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+    },
+    yAxis: {
+      type: "value",
+    },
+    series: [
+      {
+        name: "Throughput",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Probe",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Bandwidth",
+        type: "line",
+        data: [],
+      },
+    ],
+  };
 
-        const data = JSON.parse(response.payload)
-        console.log("Data:", data)
-        if (response.statsType === "nse") {
-            goEchartsNse.setOption(data)
-        } else if (response.statsType === "bwe") {
-            goEchartsBwe.setOption(data)
-        } else if (response.statsType === "trend") {
-            goEchartsTrend.setOption(data)
-        } else if (response.statsType === "cost") {
-            if (response.streamId === 0) {
-                goEchartsCost0.setOption(data)
-            } else if (response.streamId === 1) {
-                goEchartsCost1.setOption(data)
-            }
-        }
+  const trendOption = {
+    title: {
+      text: "Qos Stats Trend",
+    },
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: ["ThresholdUpper", "Trend", "ThresholdLower"],
+    },
+    dataZoom: [
+      {
+        type: 'slider'
+      },
+      {
+        type: 'inside'
+      }
+    ],
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      }
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+    },
+    yAxis: {
+      type: "value",
+    },
+    series: [
+      {
+        name: "ThresholdUpper",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Trend",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "ThresholdLower",
+        type: "line",
+        data: [],
+      },
+    ],
+  };
+
+
+  const nseOption = {
+    title: {
+      text: "Qos Stats Nse",
+    },
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: ["Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance", "Loss"],
+    },
+    dataZoom: [
+      {
+        type: 'slider'
+      },
+      {
+        type: 'inside'
+      }
+    ],
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      }
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+    },
+    yAxis: {
+      type: "value",
+    },
+    series: [
+      {
+        name: "Rtt",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "MinRtt",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "UpDelay",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "SUpDelay",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Slope",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Variance",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Loss",
+        type: "line",
+        data: [],
+      },
+    ],
+  };
+</script>
+
+<script>
+  // 获取 option, 并更新图表
+  let ws = null
+  window.onload = connectWS()
+  // WebSocket消息回调处理函数
+  function parseResponse(response) {
+    //console.log("Response:", response)
+    if (response.success !== true) {
+      console.log("response not success")
+      return
     }
 
-    // 连接WebSocket服务
-    async function connectWS() {
-        if (ws == null) {
-            const ip = window.location.host;
-            ws = new WebSocket("ws://"+ip+"/ws/stats", "json")
-            console.log('***CREATED WEBSOCKET')
+    const result = JSON.parse(response.payload)
+    //console.log("result:", result)
+    if (response.statsType === "bwe") {
+      bweOption.xAxis.data = result.xAxis
+      bweOption.series.forEach(function(serie, index) {
+        if (result.series[index]) { // 确保数据存在
+          serie.data = result.series[index];
         }
-
-        ws.onopen = function (evt) {
-            console.log('***ONOPEN')
+      });
+      bweEcharts.setOption(bweOption)
+    } else if (response.statsType === "trend") {
+      trendOption.xAxis.data = result.xAxis
+      trendOption.series.forEach(function(serie, index) {
+        if (result.series[index]) { // 确保数据存在
+          serie.data = result.series[index];
         }
-
-        // 注册WebSocket的消息回调处理函数
-        ws.onmessage = function (evt) {
-            //console.log('***ONMESSAGE')
-            //console.log(evt.data)
-            //console.log(JSON.parse(evt.data))
-
-            parseResponse(JSON.parse(evt.data))
+      });
+      trendEcharts.setOption(trendOption)
+    } else if (response.statsType === "cost") {
+      if (response.streamId === 0) {
+        //cost0Echarts.setOption(result)
+      } else if (response.streamId === 1) {
+        //cost1Echarts.setOption(result)
+      }
+    } else if (response.statsType === "nse") {
+      nseOption.xAxis.data = result.xAxis
+      nseOption.series.forEach(function(serie, index) {
+        if (result.series[index]) { // 确保数据存在
+          serie.data = result.series[index];
         }
+      });
+      nseEcharts.setOption(nseOption)
+    }
+  }
+
+  // 连接WebSocket服务
+  async function connectWS() {
+    if (ws == null) {
+      const ip = window.location.host;
+      ws = new WebSocket("ws://"+ip+"/ws/stats", "json")
+      console.log('***CREATED WEBSOCKET')
     }
 
-    // 关闭到WebSocket服务的连接
-    function closeWS() {
-        console.log('***CLOSE')
-        ws.close()
+    ws.onopen = function (evt) {
+      console.log('***ONOPEN')
     }
+
+    // 注册WebSocket的消息回调处理函数
+    ws.onmessage = function (evt) {
+      //console.log('***ONMESSAGE')
+      //console.log(evt.data)
+      //console.log(JSON.parse(evt.data))
+
+      parseResponse(JSON.parse(evt.data))
+    }
+  }
+
+  // 关闭到WebSocket服务的连接
+  function closeWS() {
+    ws.close()
+  }
 </script>
 
 </body>

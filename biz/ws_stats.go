@@ -20,17 +20,17 @@ const (
 	TypeReset           = 255
 )
 
-type wsStatsReqMessage struct {
-	StatsType string `json:"statsType"`
-	StreamId  int    `json:"streamId"`
-}
-
 type wsStatsRespMessage struct {
 	StatsType string `json:"statsType"`
 	StreamId  int    `json:"streamId"`
 	Payload   string `json:"payload"`
 
 	Success bool `json:"success"` // 标志WebSocket请求是否成功，仅给Web客户端回复时有效
+}
+
+type statsData struct {
+	XAxis  []string    `json:"xAxis"`
+	Series [][]float64 `json:"series"`
 }
 
 func WsStats(w http.ResponseWriter, r *http.Request) {

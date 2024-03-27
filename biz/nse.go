@@ -6,10 +6,6 @@ import (
 	"qos-stats/conf"
 	"sync"
 	"time"
-
-	"github.com/go-echarts/go-echarts/v2/charts"
-	"github.com/go-echarts/go-echarts/v2/opts"
-	"github.com/go-echarts/go-echarts/v2/types"
 )
 
 type NseStats struct {
@@ -91,55 +87,29 @@ func NSEIncoming(msg []byte) {
 }
 
 func NseStatsDraw() ([]byte, error) {
-	xAxis := make([]string, 0)
-	YAxis := make([][]opts.LineData, 7)
-
 	NseStatsMutex.Lock()
-	start := 0
 	if len(NseStatsQueue) > conf.StatsWindowsCount {
-		start = len(NseStatsQueue) - conf.StatsWindowsCount
+		start := len(NseStatsQueue) - conf.StatsWindowsCount
+		NseStatsQueue = NseStatsQueue[start:]
 	}
-
-	NseStatsQueue = NseStatsQueue[start:]
 	NseStatsMutex.Unlock()
 
+	data := statsData{
+		Series: [][]float64{{}, {}, {}, {}, {}, {}, {}},
+	}
 	NseStatsMutex.RLock()
 	for _, stats := range NseStatsQueue {
-		xAxis = append(xAxis, time.UnixMilli(stats.CreateTime).Format("15:04:05"))
-		YAxis[0] = append(YAxis[0], opts.LineData{Value: stats.Rtt})
-		YAxis[1] = append(YAxis[1], opts.LineData{Value: stats.MinRtt})
-		YAxis[2] = append(YAxis[2], opts.LineData{Value: stats.UpDelay})
-		YAxis[3] = append(YAxis[3], opts.LineData{Value: stats.SUpDelay})
-		YAxis[4] = append(YAxis[4], opts.LineData{Value: stats.Slope})
-		YAxis[5] = append(YAxis[5], opts.LineData{Value: stats.Variance})
-		YAxis[6] = append(YAxis[6], opts.LineData{Value: stats.LossRate})
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], float64(stats.Rtt))
+		data.Series[1] = append(data.Series[1], float64(stats.MinRtt))
+		data.Series[2] = append(data.Series[2], float64(stats.UpDelay))
+		data.Series[3] = append(data.Series[3], float64(stats.SUpDelay))
+		data.Series[4] = append(data.Series[4], stats.Slope)
+		data.Series[5] = append(data.Series[5], stats.Variance)
+		data.Series[6] = append(data.Series[6], float64(stats.LossRate))
 	}
 	NseStatsMutex.RUnlock()
-
-	var line = charts.NewLine()
-	line.SetGlobalOptions(
-		charts.WithInitializationOpts(opts.Initialization{
-			Theme:  types.ThemeShine,
-			Width:  "1000px",
-			Height: "500px"}),
-		charts.WithTitleOpts(opts.Title{
-			Title:    "Qos Stats",
-			Subtitle: "NSE",
-		}),
-	)
-	line.SetXAxis(xAxis).
-		AddSeries("Rtt", YAxis[0]).
-		AddSeries("MinRtt", YAxis[1]).
-		AddSeries("UpDelay", YAxis[2]).
-		AddSeries("SUpDelay", YAxis[3]).
-		AddSeries("Slope", YAxis[4]).
-		AddSeries("Variance", YAxis[5]).
-		AddSeries("Loss", YAxis[6]).
-		SetSeriesOptions(
-			charts.WithLineChartOpts(opts.LineChart{Smooth: false, ShowSymbol: false}),
-			charts.WithLabelOpts(opts.Label{Show: true}))
-	line.Validate()
-	return json.Marshal(line.JSON())
+	return json.Marshal(data)
 }
 
 func NseReset() {
