@@ -18,18 +18,22 @@
 <div class="container">
   <div class="item" id="bwe" style="width:900px;height:450px;"></div>
   <div class="item" id="trend" style="width:900px;height:450px;"></div>
+  <div class="item" id="rtt" style="width:600px;height:450px;"></div>
+  <div class="item" id="loss" style="width:600px;height:450px;"></div>
+  <div class="item" id="rate" style="width:600px;height:450px;"></div>
   <div class="item" id="cost0" style="width:900px;height:450px;"></div>
   <div class="item" id="cost1" style="width:900px;height:450px;"></div>
-  <div class="item" id="nse" style="width:900px;height:450px;"></div>
 </div>
 
 <script type="text/javascript">
   "use strict";
   const bweEcharts = echarts.init(document.getElementById('bwe'));
   const trendEcharts = echarts.init(document.getElementById('trend'));
+  const rttEcharts = echarts.init(document.getElementById('rtt'));
+  const lossEcharts = echarts.init(document.getElementById('loss'));
+  const rateEcharts = echarts.init(document.getElementById('rate'));
   const cost0Echarts = echarts.init(document.getElementById('cost0'));
   const cost1Echarts = echarts.init(document.getElementById('cost1'));
-  const nseEcharts = echarts.init(document.getElementById('nse'));
 </script>
 
 <style>
@@ -52,23 +56,31 @@
     order: 2;
   }
 
-  #nse {
+  #rtt {
     order: 3;
   }
 
-  #cost0 {
+  #loss {
     order: 4;
   }
 
-  #cost1 {
+  #rate {
     order: 5;
+  }
+
+  #cost0 {
+    order: 6;
+  }
+
+  #cost1 {
+    order: 7;
   }
 </style>
 
 <script>
   const bweOption = {
     title: {
-      text: "Qos Stats Bwe",
+      text: "Qos Bwe",
     },
     tooltip: {
       trigger: "axis",
@@ -124,7 +136,7 @@
 
   const trendOption = {
     title: {
-      text: "Qos Stats Trend",
+      text: "Qos Trend",
     },
     tooltip: {
       trigger: "axis",
@@ -178,16 +190,15 @@
     ],
   };
 
-
-  const nseOption = {
+  const rttOption = {
     title: {
-      text: "Qos Stats Nse",
+      text: "Qos Rtt",
     },
     tooltip: {
       trigger: "axis",
     },
     legend: {
-      data: ["Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance", "Loss"],
+      data: ["Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance"],
     },
     dataZoom: [
       {
@@ -247,8 +258,101 @@
         type: "line",
         data: [],
       },
+    ],
+  };
+
+
+  const lossOption = {
+    title: {
+      text: "Qos Loss",
+    },
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: ["Loss"],
+    },
+    dataZoom: [
+      {
+        type: 'slider'
+      },
+      {
+        type: 'inside'
+      }
+    ],
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      }
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+    },
+    yAxis: {
+      type: "value",
+    },
+    series: [
       {
         name: "Loss",
+        type: "line",
+        data: [],
+      },
+    ],
+  };
+
+  const rateOption = {
+    title: {
+      text: "Qos Rate",
+    },
+    tooltip: {
+      trigger: "axis",
+    },
+    legend: {
+      data: ["Send", "Recv"],
+    },
+    dataZoom: [
+      {
+        type: 'slider'
+      },
+      {
+        type: 'inside'
+      }
+    ],
+    grid: {
+      left: "3%",
+      right: "4%",
+      bottom: "3%",
+      containLabel: true,
+    },
+    toolbox: {
+      feature: {
+        saveAsImage: {}
+      }
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: [],
+    },
+    yAxis: {
+      type: "value",
+    },
+    series: [
+      {
+        name: "Send",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Recv",
         type: "line",
         data: [],
       },
@@ -292,14 +396,30 @@
       } else if (response.streamId === 1) {
         //cost1Echarts.setOption(result)
       }
-    } else if (response.statsType === "nse") {
-      nseOption.xAxis.data = result.xAxis
-      nseOption.series.forEach(function(serie, index) {
+    } else if (response.statsType === "rtt") {
+      rttOption.xAxis.data = result.xAxis
+      rttOption.series.forEach(function(serie, index) {
         if (result.series[index]) { // 确保数据存在
           serie.data = result.series[index];
         }
       });
-      nseEcharts.setOption(nseOption)
+      rttEcharts.setOption(rttOption)
+    } else if (response.statsType === "loss") {
+      lossOption.xAxis.data = result.xAxis
+      lossOption.series.forEach(function(serie, index) {
+        if (result.series[index]) { // 确保数据存在
+          serie.data = result.series[index];
+        }
+      });
+      lossEcharts.setOption(lossOption)
+    } else if (response.statsType === "rate") {
+      rateOption.xAxis.data = result.xAxis
+      rateOption.series.forEach(function(serie, index) {
+        if (result.series[index]) { // 确保数据存在
+          serie.data = result.series[index];
+        }
+      });
+      rateEcharts.setOption(rateOption)
     }
   }
 

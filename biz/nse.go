@@ -18,6 +18,8 @@ type NseStats struct {
 	Slope         float64 `json:"slope"`
 	Variance      float64 `json:"variance"`
 	LossRate      uint8   `json:"lossRate"`
+	SendRate      int64   `json:"sendRate"`
+	RecvRate      int64   `json:"recvRate"`
 	Ts            int64   `json:"ts"`
 	CreateTime    int64
 	RecvQueueLen  int
@@ -65,6 +67,12 @@ func nseStatsStart() {
 			stats.LossRate = msg[index]
 			index += 1
 
+			stats.SendRate = int64(binary.BigEndian.Uint64(msg[index:]))
+			index += 8
+
+			stats.RecvRate = int64(binary.BigEndian.Uint64(msg[index:]))
+			index += 8
+
 			stats.Ts = int64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
 
@@ -86,7 +94,7 @@ func NSEIncoming(msg []byte) {
 	}
 }
 
-func NseStatsDraw() ([]byte, error) {
+func RttStatsDraw() ([]byte, error) {
 	NseStatsMutex.Lock()
 	if len(NseStatsQueue) > conf.StatsWindowsCount {
 		start := len(NseStatsQueue) - conf.StatsWindowsCount
@@ -95,7 +103,7 @@ func NseStatsDraw() ([]byte, error) {
 	NseStatsMutex.Unlock()
 
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}, {}, {}},
+		Series: [][]float64{{}, {}, {}, {}, {}, {}},
 	}
 	NseStatsMutex.RLock()
 	for _, stats := range NseStatsQueue {
@@ -106,7 +114,33 @@ func NseStatsDraw() ([]byte, error) {
 		data.Series[3] = append(data.Series[3], float64(stats.SUpDelay))
 		data.Series[4] = append(data.Series[4], stats.Slope)
 		data.Series[5] = append(data.Series[5], stats.Variance)
-		data.Series[6] = append(data.Series[6], float64(stats.LossRate))
+	}
+	NseStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func LossStatsDraw() ([]byte, error) {
+	data := statsData{
+		Series: [][]float64{{}},
+	}
+	NseStatsMutex.RLock()
+	for _, stats := range NseStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], float64(stats.LossRate))
+	}
+	NseStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func RateStatsDraw() ([]byte, error) {
+	data := statsData{
+		Series: [][]float64{{}, {}},
+	}
+	NseStatsMutex.RLock()
+	for _, stats := range NseStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], float64(stats.SendRate))
+		data.Series[1] = append(data.Series[1], float64(stats.RecvRate))
 	}
 	NseStatsMutex.RUnlock()
 	return json.Marshal(data)

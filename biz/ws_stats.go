@@ -76,6 +76,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 
 	eg, ctx := errgroup.WithContext(context.TODO())
 
+	// Bwe
 	eg.Go(func() error {
 		for {
 			ticker := time.NewTicker(500 * time.Millisecond)
@@ -92,6 +93,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
+	// Trend
 	eg.Go(func() error {
 		for {
 			ticker := time.NewTicker(500 * time.Millisecond)
@@ -108,6 +110,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
+	// cost
 	eg.Go(func() error {
 		return nil
 		for {
@@ -130,13 +133,48 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
+	// Rtt
 	eg.Go(func() error {
 		for {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := NseStatsDraw()
-				err = respFun("nse", 255, string(respData[:]), respErr == nil)
+				respData, respErr := RttStatsDraw()
+				err = respFun("rtt", 255, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// Loss
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := LossStatsDraw()
+				err = respFun("loss", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// Rate
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := RateStatsDraw()
+				err = respFun("rate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
