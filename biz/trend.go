@@ -53,27 +53,16 @@ func TrendStatsIncoming(msg []byte) {
 }
 
 func TrendStatsDraw() ([]byte, error) {
-	//now := time.Now().UnixMilli()
 	xAxis := make([]string, 0)
 	YAxis := make([][]opts.LineData, 3)
 
-	TrendStatsMutex.Lock()
 	start := 0
-	count := conf.StatsWindowsCount * 10000
-	if len(BweStatsQueue) > count {
-		start = len(BweStatsQueue) - count
+	count := conf.StatsWindowsCount
+	TrendStatsMutex.Lock()
+	if len(TrendStatsQueue) > count {
+		start = len(TrendStatsQueue) - count
+		TrendStatsQueue = TrendStatsQueue[start:]
 	}
-	/*
-	   for i := 0; i < len(TrendStatsQueue); i++ {
-	           if now-TrendStatsQueue[i].CreateTime > conf.StatsWindowsTimeMs &&
-	                   len(TrendStatsQueue) > conf.StatsWindowsCount*1000 {
-	                   start = i
-	           } else {
-	                   break
-	           }
-	   }
-	*/
-	TrendStatsQueue = TrendStatsQueue[start:]
 	TrendStatsMutex.Unlock()
 
 	TrendStatsMutex.RLock()
