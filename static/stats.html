@@ -4,30 +4,25 @@
     <meta charset="utf-8">
     <title>Awesome go-echarts</title>
     <script src="https://go-echarts.github.io/go-echarts-assets/assets/echarts.min.js"></script>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/chalk.js"></script>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/essos.js"></script>
-    <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/walden.js"></script>
     <script src="https://go-echarts.github.io/go-echarts-assets/assets/themes/roma"></script>
 </head>
 
 <body>
 <div class="container">
-    <div class="item" id="nse" style="width:900px;height:450px;"></div>
-<!--    <div class="item" id="stats" style="width:900px;height:450px;"></div>-->
     <div class="item" id="bwe" style="width:900px;height:450px;"></div>
-<!--    <div class="item" id="bwe" style="width:900px;height:450px;"></div>-->
-<!--    <div class="item" id="trend" style="width:900px;height:450px;"></div>-->
-<!--    <div class="item" id="cost0" style="width:900px;height:450px;"></div>-->
-<!--    <div class="item" id="cost1" style="width:900px;height:450px;"></div>-->
+    <div class="item" id="trend" style="width:900px;height:450px;"></div>
+    <div class="item" id="cost0" style="width:900px;height:450px;"></div>
+    <div class="item" id="cost1" style="width:900px;height:450px;"></div>
+    <div class="item" id="nse" style="width:900px;height:450px;"></div>
 </div>
 
 <script type="text/javascript">
     "use strict";
-    let goEchartsNse = echarts.init(document.getElementById('nse'), "roma");
     let goEchartsBwe = echarts.init(document.getElementById('bwe'), "roma");
-    // let goEchartsTrend = echarts.init(document.getElementById('trend'), "chalk");
-    // let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "chalk");
-    // let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "chalk");
+    let goEchartsTrend = echarts.init(document.getElementById('trend'), "roma");
+    let goEchartsCost0 = echarts.init(document.getElementById('cost0'), "roma");
+    let goEchartsCost1 = echarts.init(document.getElementById('cost1'), "roma");
+    let goEchartsNse = echarts.init(document.getElementById('nse'), "roma");
 </script>
 
 <style>
@@ -42,25 +37,25 @@
         margin: 10px;
     }
 
-    #nse {
+    #bwe {
         order: 1;
     }
 
-    #bwe {
+    #trend {
         order: 2;
     }
 
-    /*#trend {*/
-    /*    order: 2;*/
-    /*}*/
+    #cost0 {
+        order: 3;
+    }
 
-    /*#cost0 {*/
-    /*    order: 3;*/
-    /*}*/
+    #cost1 {
+        order: 4;
+    }
 
-    /*#cost1 {*/
-    /*    order: 4;*/
-    /*}*/
+    #nse {
+        order: 5;
+    }
 </style>
 
 <script>
@@ -81,12 +76,12 @@
         } else if (response.statsType === "bwe") {
             goEchartsBwe.setOption(data)
         } else if (response.statsType === "trend") {
-            //goEchartsTrend.setOption(data)
+            goEchartsTrend.setOption(data)
         } else if (response.statsType === "cost") {
             if (response.streamId === 0) {
-                //goEchartsCost0.setOption(data)
+                goEchartsCost0.setOption(data)
             } else if (response.streamId === 1) {
-                //goEchartsCost1.setOption(data)
+                goEchartsCost1.setOption(data)
             }
         }
     }
@@ -105,7 +100,7 @@
 
         // 注册WebSocket的消息回调处理函数
         ws.onmessage = function (evt) {
-            console.log('***ONMESSAGE')
+            //console.log('***ONMESSAGE')
             //console.log(evt.data)
             //console.log(JSON.parse(evt.data))
 
@@ -113,35 +108,11 @@
         }
     }
 
-    // 发送数据到WebSocket服务
-    function sendWS(type, streamId) {
-        console.log('***SEND')
-
-        let data = {}
-        data["statsType"] = type
-        if (streamId == null) {
-            data["streamId"] = -1
-        } else {
-            data["streamId"] = streamId
-        }
-        console.log(JSON.stringify(data))
-        ws.send(JSON.stringify(data))
-    }
-
     // 关闭到WebSocket服务的连接
     function closeWS() {
         console.log('***CLOSE')
         ws.close()
     }
-
-    function getDataByWs() {
-        sendWS("bwe",null)
-        sendWS("trend",null)
-        sendWS("cost",0)
-        sendWS("cost",1)
-        sendWS("nse",null)
-    }
-    //setInterval(getDataByWs, 100);
 </script>
 
 </body>

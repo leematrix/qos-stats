@@ -115,7 +115,6 @@ func HttpStart() {
 	mux.HandleFunc("/stats/bwe", statsBwe)
 	mux.HandleFunc("/stats/trend", statsTrend)
 	mux.HandleFunc("/ws/stats", biz.WsStats)
-	mux.HandleFunc("/ws/tc", biz.WsTc)
 
 	s := &http.Server{
 		Addr:    "0.0.0.0:8090",
