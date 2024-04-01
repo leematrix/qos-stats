@@ -86,7 +86,7 @@
       trigger: "axis",
     },
     legend: {
-      data: ["Throughput", "Probe", "Bandwidth"],
+      data: ["Throughput", "Probe", "Delay", "Loss", "Bandwidth"],
     },
     dataZoom: [
       {
@@ -123,6 +123,16 @@
       },
       {
         name: "Probe",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Delay",
+        type: "line",
+        data: [],
+      },
+      {
+        name: "Loss",
         type: "line",
         data: [],
       },

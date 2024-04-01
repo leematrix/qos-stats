@@ -83,14 +83,16 @@ func BweStatsDraw() ([]byte, error) {
 	BweStatsMutex.Unlock()
 
 	data := statsData{
-		Series: [][]float64{{}, {}, {}},
+		Series: [][]float64{{}, {}, {}, {}, {}},
 	}
 	BweStatsMutex.RLock()
 	for _, stats := range BweStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], stats.ThroughputEstimator)
 		data.Series[1] = append(data.Series[1], stats.ProbeEstimator)
-		data.Series[2] = append(data.Series[2], stats.FinalBasedBwe)
+		data.Series[2] = append(data.Series[2], stats.DelayBasedBwe)
+		data.Series[3] = append(data.Series[3], stats.LossRate)
+		data.Series[4] = append(data.Series[4], stats.FinalBasedBwe)
 	}
 	BweStatsMutex.RUnlock()
 	return json.Marshal(data)
