@@ -9,18 +9,18 @@ import (
 )
 
 type BweStats struct {
-	ThroughputEstimator float64 `json:"throughput"`
-	ProbeEstimator      float64 `json:"probe"`
-	DelayBasedBwe       float64 `json:"delay"`
-	LossBasedBwe        float64 `json:"loss"`
-	FinalBasedBwe       float64 `json:"final"`
-	Rtt                 uint64  `json:"rtt"`
-	RandomDelay         uint64  `json:"randomDelay"`
-	LossRate            float64 `json:"lossRate"`
-	RandomLossRate      float64 `json:"randomLossRate"`
-	CreateTime          int64
-	RealBandwidth       int
-	RecvQueueLen        int
+	AckedEstimator float64 `json:"acked"`
+	ProbeEstimator float64 `json:"probe"`
+	DelayBasedBwe  float64 `json:"delay"`
+	LossBasedBwe   float64 `json:"loss"`
+	FinalBasedBwe  float64 `json:"final"`
+	Rtt            uint64  `json:"rtt"`
+	RandomDelay    uint64  `json:"randomDelay"`
+	LossRate       float64 `json:"lossRate"`
+	RandomLossRate float64 `json:"randomLossRate"`
+	CreateTime     int64
+	RealBandwidth  int
+	RecvQueueLen   int
 }
 
 var realBandwidthKBPS int = 0
@@ -39,7 +39,7 @@ func bweStatsStart() {
 			}
 
 			index := 0
-			stats.ThroughputEstimator = float64(binary.BigEndian.Uint64(msg[index:]))
+			stats.AckedEstimator = float64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
 
 			stats.ProbeEstimator = float64(binary.BigEndian.Uint64(msg[index:]))
@@ -88,10 +88,10 @@ func BweStatsDraw() ([]byte, error) {
 	BweStatsMutex.RLock()
 	for _, stats := range BweStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
-		data.Series[0] = append(data.Series[0], stats.ThroughputEstimator)
+		data.Series[0] = append(data.Series[0], stats.AckedEstimator)
 		data.Series[1] = append(data.Series[1], stats.ProbeEstimator)
 		data.Series[2] = append(data.Series[2], stats.DelayBasedBwe)
-		data.Series[3] = append(data.Series[3], stats.LossRate)
+		data.Series[3] = append(data.Series[3], stats.LossBasedBwe)
 		data.Series[4] = append(data.Series[4], stats.FinalBasedBwe)
 	}
 	BweStatsMutex.RUnlock()
