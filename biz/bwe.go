@@ -1,8 +1,10 @@
 package biz
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
+	"log"
 	"qos-stats/conf"
 	"sync"
 	"time"
@@ -19,21 +21,29 @@ type BweStats struct {
 	LossRate       float64 `json:"lossRate"`
 	RandomLossRate float64 `json:"randomLossRate"`
 	CreateTime     int64
-	RealBandwidth  int
-	RecvQueueLen   int
 }
 
-var realBandwidthKBPS int = 0
-var recvQueueLen = 0
-var bweChan = make(chan []byte, 1024)
+type BweStatsSession struct {
+	BweStatsChan  chan []byte
+	BweStatsQueue []BweStats
+	BweStatsMutex sync.RWMutex
+}
 
-var BweStatsQueue = make([]BweStats, 0)
-var BweStatsMutex sync.RWMutex
+func BweStatsSessionCreate() *BweStatsSession {
+	session := &BweStatsSession{
+		BweStatsChan:  make(chan []byte, 1024),
+		BweStatsQueue: make([]BweStats, 0),
+	}
+	return session
+}
 
-func bweStatsStart() {
+func (bwe *BweStatsSession) Run(ctx context.Context) {
 	for {
 		select {
-		case msg := <-bweChan:
+		case <-ctx.Done():
+			log.Println("bwe exit.")
+			return
+		case msg := <-bwe.BweStatsChan:
 			stats := BweStats{
 				CreateTime: time.Now().Unix(),
 			}
@@ -60,33 +70,33 @@ func bweStatsStart() {
 			stats.LossRate = float64(msg[index]) / 255
 			index++
 
-			stats.RealBandwidth = realBandwidthKBPS
-			stats.RecvQueueLen = recvQueueLen
-
-			BweStatsMutex.Lock()
-			BweStatsQueue = append(BweStatsQueue, stats)
-			BweStatsMutex.Unlock()
+			bwe.BweStatsMutex.Lock()
+			bwe.BweStatsQueue = append(bwe.BweStatsQueue, stats)
+			bwe.BweStatsMutex.Unlock()
 		}
 	}
 }
 
-func BweStatsIncoming(msg []byte) {
-	bweChan <- msg
+func (bwe *BweStatsSession) Incoming(msg []byte) {
+	select {
+	case bwe.BweStatsChan <- msg:
+	default:
+	}
 }
 
-func BweStatsDraw() ([]byte, error) {
-	BweStatsMutex.Lock()
-	if len(BweStatsQueue) > conf.StatsWindowsCount {
-		start := len(BweStatsQueue) - conf.StatsWindowsCount
-		BweStatsQueue = BweStatsQueue[start:]
+func (bwe *BweStatsSession) Draw() ([]byte, error) {
+	bwe.BweStatsMutex.Lock()
+	if len(bwe.BweStatsQueue) > conf.StatsWindowsCount {
+		start := len(bwe.BweStatsQueue) - conf.StatsWindowsCount
+		bwe.BweStatsQueue = bwe.BweStatsQueue[start:]
 	}
-	BweStatsMutex.Unlock()
+	bwe.BweStatsMutex.Unlock()
 
 	data := statsData{
 		Series: [][]float64{{}, {}, {}, {}, {}},
 	}
-	BweStatsMutex.RLock()
-	for _, stats := range BweStatsQueue {
+	bwe.BweStatsMutex.RLock()
+	for _, stats := range bwe.BweStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], stats.AckedEstimator)
 		data.Series[1] = append(data.Series[1], stats.ProbeEstimator)
@@ -94,17 +104,17 @@ func BweStatsDraw() ([]byte, error) {
 		data.Series[3] = append(data.Series[3], stats.LossBasedBwe)
 		data.Series[4] = append(data.Series[4], stats.FinalBasedBwe)
 	}
-	BweStatsMutex.RUnlock()
+	bwe.BweStatsMutex.RUnlock()
 	return json.Marshal(data)
 }
 
-func BweStatsReset() {
-	BweStatsMutex.Lock()
-	defer BweStatsMutex.Unlock()
-	BweStatsQueue = BweStatsQueue[:0]
-	for len(bweChan) > 0 {
+func (bwe *BweStatsSession) Reset() {
+	bwe.BweStatsMutex.Lock()
+	defer bwe.BweStatsMutex.Unlock()
+	bwe.BweStatsQueue = bwe.BweStatsQueue[:0]
+	for len(bwe.BweStatsChan) > 0 {
 		select {
-		case <-bweChan:
+		case <-bwe.BweStatsChan:
 		default:
 		}
 	}

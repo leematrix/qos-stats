@@ -15,7 +15,7 @@ func statsIndex(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 
-func HttpStart() {
+func HttpServerStart() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/stats", statsIndex)
 	mux.HandleFunc("/ws/stats", biz.WsStats)

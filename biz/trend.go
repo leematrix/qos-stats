@@ -1,8 +1,10 @@
 package biz
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
+	"log"
 	"math"
 	"qos-stats/conf"
 	"sync"
@@ -15,14 +17,27 @@ type TrendStats struct {
 	CreateTime    int64
 }
 
-var TrendStatsChan = make(chan []byte, 1024)
-var TrendStatsQueue = make([]TrendStats, 0)
-var TrendStatsMutex sync.RWMutex
+type TrendStatsSession struct {
+	TrendStatsChan  chan []byte
+	TrendStatsQueue []TrendStats
+	TrendStatsMutex sync.RWMutex
+}
 
-func trendStatsStart() {
+func TrendStatsSessionCreate() *TrendStatsSession {
+	session := &TrendStatsSession{
+		TrendStatsChan:  make(chan []byte, 1024),
+		TrendStatsQueue: make([]TrendStats, 0),
+	}
+	return session
+}
+
+func (trend *TrendStatsSession) Run(ctx context.Context) {
 	for {
 		select {
-		case msg := <-TrendStatsChan:
+		case <-ctx.Done():
+			log.Println("trend exit.")
+			return
+		case msg := <-trend.TrendStatsChan:
 			stats := TrendStats{
 				CreateTime: time.Now().Unix(),
 			}
@@ -34,46 +49,49 @@ func trendStatsStart() {
 			stats.Threshold = math.Float64frombits(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
 
-			TrendStatsMutex.Lock()
-			TrendStatsQueue = append(TrendStatsQueue, stats)
-			TrendStatsMutex.Unlock()
+			trend.TrendStatsMutex.Lock()
+			trend.TrendStatsQueue = append(trend.TrendStatsQueue, stats)
+			trend.TrendStatsMutex.Unlock()
 		}
 	}
 }
 
-func TrendStatsIncoming(msg []byte) {
-	TrendStatsChan <- msg
+func (trend *TrendStatsSession) Incoming(msg []byte) {
+	select {
+	case trend.TrendStatsChan <- msg:
+	default:
+	}
 }
 
-func TrendStatsDraw() ([]byte, error) {
-	TrendStatsMutex.Lock()
-	if len(TrendStatsQueue) > conf.StatsWindowsCount {
-		start := len(TrendStatsQueue) - conf.StatsWindowsCount
-		TrendStatsQueue = TrendStatsQueue[start:]
+func (trend *TrendStatsSession) Draw() ([]byte, error) {
+	trend.TrendStatsMutex.Lock()
+	if len(trend.TrendStatsQueue) > conf.StatsWindowsCount {
+		start := len(trend.TrendStatsQueue) - conf.StatsWindowsCount
+		trend.TrendStatsQueue = trend.TrendStatsQueue[start:]
 	}
-	TrendStatsMutex.Unlock()
+	trend.TrendStatsMutex.Unlock()
 
 	data := statsData{
 		Series: [][]float64{{}, {}, {}},
 	}
-	TrendStatsMutex.RLock()
-	for _, stats := range TrendStatsQueue {
+	trend.TrendStatsMutex.RLock()
+	for _, stats := range trend.TrendStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], stats.Threshold)
 		data.Series[1] = append(data.Series[1], stats.ModifiedTrend)
 		data.Series[2] = append(data.Series[2], -stats.Threshold)
 	}
-	TrendStatsMutex.RUnlock()
+	trend.TrendStatsMutex.RUnlock()
 	return json.Marshal(data)
 }
 
-func TrendStatsReset() {
-	TrendStatsMutex.Lock()
-	defer TrendStatsMutex.Unlock()
-	TrendStatsQueue = TrendStatsQueue[:0]
-	for len(TrendStatsChan) > 0 {
+func (trend *TrendStatsSession) Reset() {
+	trend.TrendStatsMutex.Lock()
+	defer trend.TrendStatsMutex.Unlock()
+	trend.TrendStatsQueue = trend.TrendStatsQueue[:0]
+	for len(trend.TrendStatsChan) > 0 {
 		select {
-		case <-TrendStatsChan:
+		case <-trend.TrendStatsChan:
 		default:
 		}
 	}

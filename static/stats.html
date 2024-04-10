@@ -437,7 +437,11 @@
   async function connectWS() {
     if (ws == null) {
       const ip = window.location.host;
-      ws = new WebSocket("ws://"+ip+"/ws/stats", "json")
+      const queryString = window.location.search;
+      const urlParams = new URLSearchParams(queryString);
+      const id = urlParams.get('id');
+
+      ws = new WebSocket("ws://"+ip+"/ws/stats"+"?id="+id, "json")
       console.log('***CREATED WEBSOCKET')
     }
 

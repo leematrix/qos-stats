@@ -20,6 +20,86 @@ const (
 	TypeReset           = 255
 )
 
+type StatsSession struct {
+	context   context.Context
+	cancel    context.CancelFunc
+	SessionID string
+	Bwe       *BweStatsSession
+	Trend     *TrendStatsSession
+	Nse       *NseStatsSession
+}
+
+func StatsSessionCreate(SessionID string) *StatsSession {
+	session := &StatsSession{
+		SessionID: SessionID,
+		Bwe:       BweStatsSessionCreate(),
+		Trend:     TrendStatsSessionCreate(),
+		Nse:       NseStatsSessionCreate(),
+	}
+	return session
+}
+
+func (sess *StatsSession) Start() {
+	sess.context, sess.cancel = context.WithCancel(context.Background())
+	go sess.Bwe.Run(sess.context)
+	go sess.Trend.Run(sess.context)
+	go sess.Nse.Run(sess.context)
+}
+
+func (sess *StatsSession) Stop() {
+	sess.cancel()
+}
+
+func (sess *StatsSession) Reset() {
+	sess.Bwe.Reset()
+	sess.Trend.Reset()
+	sess.Nse.Reset()
+}
+
+func (sess *StatsSession) IsExpired() bool {
+	return sess.Nse.IsExpired()
+}
+
+type StatsSessionManager struct {
+	Sessions map[string]*StatsSession
+}
+
+var StatsSessMgr = StatsSessionManager{
+	Sessions: make(map[string]*StatsSession),
+}
+
+func (mgr *StatsSessionManager) Add(SessionID string) *StatsSession {
+	sess := StatsSessionCreate(SessionID)
+	StatsSessMgr.Sessions[SessionID] = sess
+	return sess
+}
+
+func (mgr *StatsSessionManager) Del(SessionID string) {
+	delete(StatsSessMgr.Sessions, SessionID)
+}
+
+func (mgr *StatsSessionManager) Get(SessionID string) *StatsSession {
+	return StatsSessMgr.Sessions[SessionID]
+}
+
+func (mgr *StatsSessionManager) CheckExpired() {
+	ticker := time.NewTicker(1 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				for id, sess := range mgr.Sessions {
+					if sess.IsExpired() {
+						sess.Stop()
+						mgr.Del(id)
+						log.Println("Del expired id:", id)
+					}
+				}
+			}
+		}
+	}()
+}
+
 type wsStatsRespMessage struct {
 	StatsType string `json:"statsType"`
 	StreamId  int    `json:"streamId"`
@@ -48,6 +128,24 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close()
+
+	queryParams := r.URL.Query()
+	// 获取id参数的值
+	id := queryParams.Get("id")
+	if id == "" {
+		// 如果没有id参数，返回错误
+		http.Error(w, "Missing id parameter", http.StatusBadRequest)
+		return
+	}
+
+	// 打印id
+	log.Printf("Received id: %s", id)
+
+	sess := StatsSessMgr.Get(id)
+	if sess == nil {
+		log.Printf("Not exist id: %s", id)
+		return
+	}
 
 	var mutex sync.Mutex
 	respFun := func(statsType string, streamId int, payload string, success bool) error {
@@ -82,7 +180,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := BweStatsDraw()
+				respData, respErr := sess.Bwe.Draw()
 				err = respFun("bwe", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
@@ -99,7 +197,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := TrendStatsDraw()
+				respData, respErr := sess.Trend.Draw()
 				err = respFun("trend", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
@@ -139,7 +237,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := RttStatsDraw()
+				respData, respErr := sess.Nse.RttStatsDraw()
 				err = respFun("rtt", 255, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
@@ -156,7 +254,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := LossStatsDraw()
+				respData, respErr := sess.Nse.LossStatsDraw()
 				err = respFun("loss", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
@@ -173,7 +271,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := RateStatsDraw()
+				respData, respErr := sess.Nse.RateStatsDraw()
 				err = respFun("rate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
@@ -187,12 +285,4 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 	if err = eg.Wait(); err != nil {
 		return
 	}
-}
-
-func Start() {
-	go TraceStart()
-	go bweStatsStart()
-	go costStatsStart()
-	go trendStatsStart()
-	go nseStatsStart()
 }

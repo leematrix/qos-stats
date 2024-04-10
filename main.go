@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"qos-stats/biz"
 	"qos-stats/conf"
 	"qos-stats/server"
 )
@@ -28,11 +27,10 @@ func logInit() {
 }
 
 func main() {
-	log.Println("Qos Stats Start.")
+	log.Println("Qos Stats Run.")
 
 	logInit()
-	biz.Start()
-	server.SignalServerStart()
-	server.HttpStart()
+	server.StatsServerStart()
+	server.HttpServerStart()
 	log.Println("Qos Stats Exit.")
 }

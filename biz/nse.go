@@ -1,8 +1,10 @@
 package biz
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
+	"log"
 	"qos-stats/conf"
 	"sync"
 	"time"
@@ -22,18 +24,31 @@ type NseStats struct {
 	RecvRate      int64   `json:"recvRate"`
 	Ts            int64   `json:"ts"`
 	CreateTime    int64
-	RecvQueueLen  int
 }
 
-var nseStatsChan = make(chan []byte, 1024)
+type NseStatsSession struct {
+	nseStatsChan  chan []byte
+	NseStatsQueue []NseStats
+	NseStatsMutex sync.RWMutex
+	LastRecvMsg   int64
+}
 
-var NseStatsQueue = make([]NseStats, 0)
-var NseStatsMutex sync.RWMutex
+func NseStatsSessionCreate() *NseStatsSession {
+	session := &NseStatsSession{
+		nseStatsChan:  make(chan []byte, 1024),
+		NseStatsQueue: make([]NseStats, 0),
+		LastRecvMsg:   time.Now().Unix(),
+	}
+	return session
+}
 
-func nseStatsStart() {
+func (nse *NseStatsSession) Run(ctx context.Context) {
 	for {
 		select {
-		case msg := <-nseStatsChan:
+		case <-ctx.Done():
+			log.Println("nse exit.")
+			return
+		case msg := <-nse.nseStatsChan:
 			stats := NseStats{
 				CreateTime: time.Now().Unix(),
 			}
@@ -72,37 +87,37 @@ func nseStatsStart() {
 			stats.Ts = int64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
 
-			stats.RecvQueueLen = recvQueueLen
-
-			NseStatsMutex.Lock()
-			NseStatsQueue = append(NseStatsQueue, stats)
-			NseStatsMutex.Unlock()
+			nse.NseStatsMutex.Lock()
+			nse.NseStatsQueue = append(nse.NseStatsQueue, stats)
+			nse.NseStatsMutex.Unlock()
 
 			TraceIncoming(stats)
+
+			nse.LastRecvMsg = time.Now().Unix()
 		}
 	}
 }
 
-func NSEIncoming(msg []byte) {
+func (nse *NseStatsSession) Incoming(msg []byte) {
 	select {
-	case nseStatsChan <- msg:
+	case nse.nseStatsChan <- msg:
 	default:
 	}
 }
 
-func RttStatsDraw() ([]byte, error) {
-	NseStatsMutex.Lock()
-	if len(NseStatsQueue) > conf.StatsWindowsCount {
-		start := len(NseStatsQueue) - conf.StatsWindowsCount
-		NseStatsQueue = NseStatsQueue[start:]
+func (nse *NseStatsSession) RttStatsDraw() ([]byte, error) {
+	nse.NseStatsMutex.Lock()
+	if len(nse.NseStatsQueue) > conf.StatsWindowsCount {
+		start := len(nse.NseStatsQueue) - conf.StatsWindowsCount
+		nse.NseStatsQueue = nse.NseStatsQueue[start:]
 	}
-	NseStatsMutex.Unlock()
+	nse.NseStatsMutex.Unlock()
 
 	data := statsData{
 		Series: [][]float64{{}, {}, {}, {}, {}, {}},
 	}
-	NseStatsMutex.RLock()
-	for _, stats := range NseStatsQueue {
+	nse.NseStatsMutex.RLock()
+	for _, stats := range nse.NseStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], float64(stats.Rtt))
 		data.Series[1] = append(data.Series[1], float64(stats.MinRtt))
@@ -111,45 +126,49 @@ func RttStatsDraw() ([]byte, error) {
 		data.Series[4] = append(data.Series[4], stats.Slope)
 		data.Series[5] = append(data.Series[5], stats.Variance)
 	}
-	NseStatsMutex.RUnlock()
+	nse.NseStatsMutex.RUnlock()
 	return json.Marshal(data)
 }
 
-func LossStatsDraw() ([]byte, error) {
+func (nse *NseStatsSession) LossStatsDraw() ([]byte, error) {
 	data := statsData{
 		Series: [][]float64{{}},
 	}
-	NseStatsMutex.RLock()
-	for _, stats := range NseStatsQueue {
+	nse.NseStatsMutex.RLock()
+	for _, stats := range nse.NseStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], float64(stats.LossRate))
 	}
-	NseStatsMutex.RUnlock()
+	nse.NseStatsMutex.RUnlock()
 	return json.Marshal(data)
 }
 
-func RateStatsDraw() ([]byte, error) {
+func (nse *NseStatsSession) RateStatsDraw() ([]byte, error) {
 	data := statsData{
 		Series: [][]float64{{}, {}},
 	}
-	NseStatsMutex.RLock()
-	for _, stats := range NseStatsQueue {
+	nse.NseStatsMutex.RLock()
+	for _, stats := range nse.NseStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], float64(stats.SendRate))
 		data.Series[1] = append(data.Series[1], float64(stats.RecvRate))
 	}
-	NseStatsMutex.RUnlock()
+	nse.NseStatsMutex.RUnlock()
 	return json.Marshal(data)
 }
 
-func NseReset() {
-	NseStatsMutex.Lock()
-	defer NseStatsMutex.Unlock()
-	NseStatsQueue = NseStatsQueue[:0]
-	for len(nseStatsChan) > 0 {
+func (nse *NseStatsSession) Reset() {
+	nse.NseStatsMutex.Lock()
+	defer nse.NseStatsMutex.Unlock()
+	nse.NseStatsQueue = nse.NseStatsQueue[:0]
+	for len(nse.nseStatsChan) > 0 {
 		select {
-		case <-nseStatsChan:
+		case <-nse.nseStatsChan:
 		default:
 		}
 	}
+}
+
+func (nse *NseStatsSession) IsExpired() bool {
+	return time.Now().Unix()-nse.LastRecvMsg > 3600
 }

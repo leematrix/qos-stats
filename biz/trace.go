@@ -8,6 +8,9 @@ import (
 	"qos-stats/data"
 )
 
+type TraceStats struct {
+}
+
 var wsCli *websocket.Conn
 var nseStatsMsgChan = make(chan NseStats, 1024)
 
