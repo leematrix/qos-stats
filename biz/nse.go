@@ -89,6 +89,10 @@ func (nse *NseStatsSession) Run(ctx context.Context) {
 
 			nse.NseStatsMutex.Lock()
 			nse.NseStatsQueue = append(nse.NseStatsQueue, stats)
+			if len(nse.NseStatsQueue) > conf.StatsWindowsCount {
+				start := len(nse.NseStatsQueue) - conf.StatsWindowsCount
+				nse.NseStatsQueue = nse.NseStatsQueue[start:]
+			}
 			nse.NseStatsMutex.Unlock()
 
 			TraceIncoming(stats)
@@ -106,13 +110,6 @@ func (nse *NseStatsSession) Incoming(msg []byte) {
 }
 
 func (nse *NseStatsSession) RttStatsDraw() ([]byte, error) {
-	nse.NseStatsMutex.Lock()
-	if len(nse.NseStatsQueue) > conf.StatsWindowsCount {
-		start := len(nse.NseStatsQueue) - conf.StatsWindowsCount
-		nse.NseStatsQueue = nse.NseStatsQueue[start:]
-	}
-	nse.NseStatsMutex.Unlock()
-
 	data := statsData{
 		Series: [][]float64{{}, {}, {}, {}, {}, {}},
 	}

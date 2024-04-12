@@ -72,6 +72,10 @@ func (bwe *BweStatsSession) Run(ctx context.Context) {
 
 			bwe.BweStatsMutex.Lock()
 			bwe.BweStatsQueue = append(bwe.BweStatsQueue, stats)
+			if len(bwe.BweStatsQueue) > conf.StatsWindowsCount {
+				start := len(bwe.BweStatsQueue) - conf.StatsWindowsCount
+				bwe.BweStatsQueue = bwe.BweStatsQueue[start:]
+			}
 			bwe.BweStatsMutex.Unlock()
 		}
 	}
@@ -85,13 +89,6 @@ func (bwe *BweStatsSession) Incoming(msg []byte) {
 }
 
 func (bwe *BweStatsSession) Draw() ([]byte, error) {
-	bwe.BweStatsMutex.Lock()
-	if len(bwe.BweStatsQueue) > conf.StatsWindowsCount {
-		start := len(bwe.BweStatsQueue) - conf.StatsWindowsCount
-		bwe.BweStatsQueue = bwe.BweStatsQueue[start:]
-	}
-	bwe.BweStatsMutex.Unlock()
-
 	data := statsData{
 		Series: [][]float64{{}, {}, {}, {}, {}},
 	}

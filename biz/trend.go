@@ -51,6 +51,10 @@ func (trend *TrendStatsSession) Run(ctx context.Context) {
 
 			trend.TrendStatsMutex.Lock()
 			trend.TrendStatsQueue = append(trend.TrendStatsQueue, stats)
+			if len(trend.TrendStatsQueue) > conf.StatsWindowsCount {
+				start := len(trend.TrendStatsQueue) - conf.StatsWindowsCount
+				trend.TrendStatsQueue = trend.TrendStatsQueue[start:]
+			}
 			trend.TrendStatsMutex.Unlock()
 		}
 	}
@@ -64,13 +68,6 @@ func (trend *TrendStatsSession) Incoming(msg []byte) {
 }
 
 func (trend *TrendStatsSession) Draw() ([]byte, error) {
-	trend.TrendStatsMutex.Lock()
-	if len(trend.TrendStatsQueue) > conf.StatsWindowsCount {
-		start := len(trend.TrendStatsQueue) - conf.StatsWindowsCount
-		trend.TrendStatsQueue = trend.TrendStatsQueue[start:]
-	}
-	trend.TrendStatsMutex.Unlock()
-
 	data := statsData{
 		Series: [][]float64{{}, {}, {}},
 	}

@@ -51,7 +51,6 @@ func StatsServerStart() {
 			sess := biz.StatsSessMgr.Get(sessionID)
 			if sess == nil {
 				sess = biz.StatsSessMgr.Add(sessionID)
-				sess.Start()
 			}
 
 			switch buf[index] {
@@ -65,6 +64,10 @@ func StatsServerStart() {
 				sess.Trend.Incoming(buf[index+1:])
 			case biz.TypeNSEStats:
 				sess.Nse.Incoming(buf[index+1:])
+			case biz.TypeSenderTwoSecStats:
+				sess.TwoSec.SenderIncoming(buf[index+1:])
+			case biz.TypeReceiverTwoSecStats:
+				sess.TwoSec.ReceiverIncoming(buf[index+1:])
 			case biz.TypeReset:
 				sess.Reset()
 				log.Println("Reset stats.")

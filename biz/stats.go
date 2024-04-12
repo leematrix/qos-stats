@@ -12,12 +12,14 @@ import (
 )
 
 const (
-	TypeBweStats        = 0
-	TypeTransportStats  = 1
-	TypeFrameStats      = 2
-	TypeDelayTrendStats = 3
-	TypeNSEStats        = 4
-	TypeReset           = 255
+	TypeBweStats            = 0
+	TypeTransportStats      = 1
+	TypeFrameStats          = 2
+	TypeDelayTrendStats     = 3
+	TypeNSEStats            = 4
+	TypeSenderTwoSecStats   = 5
+	TypeReceiverTwoSecStats = 6
+	TypeReset               = 255
 )
 
 type StatsSession struct {
@@ -27,6 +29,7 @@ type StatsSession struct {
 	Bwe       *BweStatsSession
 	Trend     *TrendStatsSession
 	Nse       *NseStatsSession
+	TwoSec    *TwoSecStatsSession
 }
 
 func StatsSessionCreate(SessionID string) *StatsSession {
@@ -35,7 +38,9 @@ func StatsSessionCreate(SessionID string) *StatsSession {
 		Bwe:       BweStatsSessionCreate(),
 		Trend:     TrendStatsSessionCreate(),
 		Nse:       NseStatsSessionCreate(),
+		TwoSec:    TwoStatsSessionCreate(),
 	}
+	session.Start()
 	return session
 }
 
@@ -44,6 +49,7 @@ func (sess *StatsSession) Start() {
 	go sess.Bwe.Run(sess.context)
 	go sess.Trend.Run(sess.context)
 	go sess.Nse.Run(sess.context)
+	go sess.TwoSec.Run(sess.context)
 }
 
 func (sess *StatsSession) Stop() {
@@ -54,6 +60,7 @@ func (sess *StatsSession) Reset() {
 	sess.Bwe.Reset()
 	sess.Trend.Reset()
 	sess.Nse.Reset()
+	sess.TwoSec.Reset()
 }
 
 func (sess *StatsSession) IsExpired() bool {
@@ -62,6 +69,7 @@ func (sess *StatsSession) IsExpired() bool {
 
 type StatsSessionManager struct {
 	Sessions map[string]*StatsSession
+	sync.RWMutex
 }
 
 var StatsSessMgr = StatsSessionManager{
@@ -69,16 +77,23 @@ var StatsSessMgr = StatsSessionManager{
 }
 
 func (mgr *StatsSessionManager) Add(SessionID string) *StatsSession {
+	mgr.Lock()
+	defer mgr.Unlock()
 	sess := StatsSessionCreate(SessionID)
 	StatsSessMgr.Sessions[SessionID] = sess
+	log.Println("Add id:", SessionID)
 	return sess
 }
 
 func (mgr *StatsSessionManager) Del(SessionID string) {
+	mgr.Lock()
+	defer mgr.Unlock()
 	delete(StatsSessMgr.Sessions, SessionID)
 }
 
 func (mgr *StatsSessionManager) Get(SessionID string) *StatsSession {
+	mgr.RLock()
+	defer mgr.RUnlock()
 	return StatsSessMgr.Sessions[SessionID]
 }
 
@@ -273,6 +288,74 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			case <-ticker.C:
 				respData, respErr := sess.Nse.RateStatsDraw()
 				err = respFun("rate", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// SendFrameRate
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.SenderFrameRateDraw()
+				err = respFun("sendFrameRate", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// RecvFrameRate
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.ReceiverFrameRateDraw()
+				err = respFun("recvFrameRate", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// NackCount
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.NackCountDraw()
+				err = respFun("nackCount", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// NackDuration
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.NackDurationDraw()
+				err = respFun("nackDuration", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
