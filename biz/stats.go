@@ -124,8 +124,10 @@ type wsStatsRespMessage struct {
 }
 
 type statsData struct {
-	XAxis  []string    `json:"xAxis"`
-	Series [][]float64 `json:"series"`
+	Legend     []string    `json:"legend"`
+	XAxis      []string    `json:"xAxis"`
+	Series     [][]float64 `json:"series"`
+	SeriesType []string    `json:"seriesType"`
 }
 
 func WsStats(w http.ResponseWriter, r *http.Request) {

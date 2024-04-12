@@ -90,7 +90,9 @@ func (bwe *BweStatsSession) Incoming(msg []byte) {
 
 func (bwe *BweStatsSession) Draw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}},
+		Legend:     []string{"Acked", "Probe", "Delay", "Loss", "Bandwidth"},
+		Series:     [][]float64{{}, {}, {}, {}, {}},
+		SeriesType: []string{"line", "line", "line", "line", "line"},
 	}
 	bwe.BweStatsMutex.RLock()
 	for _, stats := range bwe.BweStatsQueue {

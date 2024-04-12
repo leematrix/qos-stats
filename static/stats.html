@@ -12,19 +12,16 @@
       flex-wrap: wrap;
       justify-content: left;
     }
-
     .item {
       margin: 10px;
-      flex-basis: calc(50% - 20px); /* Adjust the width minus margin */
-      max-width: calc(50% - 20px); /* Adjust the width minus margin */
-      height: 250px; /* Set a fixed height or use a responsive unit */
+      flex-basis: calc(50% - 20px);
+      max-width: calc(50% - 20px);
+      height: 250px;
     }
-
-    /* Responsive adjustments */
     @media (max-width: 900px) {
       .item {
-        flex-basis: calc(100% - 20px); /* Full width on smaller screens */
-        max-width: calc(100% - 20px); /* Full width on smaller screens */
+        flex-basis: calc(100% - 20px);
+        max-width: calc(100% - 20px);
       }
     }
   </style>
@@ -46,641 +43,69 @@
 </div>
 
 <script type="text/javascript">
-  "use strict";
-  const bweEcharts = echarts.init(document.getElementById('bwe'));
-  const trendEcharts = echarts.init(document.getElementById('trend'));
-  const rttEcharts = echarts.init(document.getElementById('rtt'));
-  const lossEcharts = echarts.init(document.getElementById('loss'));
-  const rateEcharts = echarts.init(document.getElementById('rate'));
-  const cost0Echarts = echarts.init(document.getElementById('cost0'));
-  const cost1Echarts = echarts.init(document.getElementById('cost1'));
-  const sendFrameRateEcharts = echarts.init(document.getElementById('sendFrameRate'));
-  const recvFrameRateEcharts = echarts.init(document.getElementById('recvFrameRate'));
-  const nackCountEcharts = echarts.init(document.getElementById('nackCount'));
-  const nackDurationEcharts = echarts.init(document.getElementById('nackDuration'));
+  const echartsInstances = {};
+  const chartIds = ['bwe', 'trend', 'rtt', 'loss', 'rate', 'sendFrameRate', 'recvFrameRate', 'nackCount', 'nackDuration', 'cost0', 'cost1'];
+  chartIds.forEach(id => {
+    echartsInstances[id] = echarts.init(document.getElementById(id));
+  });
 
-  // Function to resize all charts
   function resizeCharts() {
-    bweEcharts.resize();
-    trendEcharts.resize();
-    rttEcharts.resize();
-    lossEcharts.resize();
-    rateEcharts.resize();
-    cost0Echarts.resize();
-    cost1Echarts.resize();
-    sendFrameRateEcharts.resize();
-    recvFrameRateEcharts.resize();
-    nackCountEcharts.resize();
-    nackDurationEcharts.resize();
+    Object.values(echartsInstances).forEach(instance => instance.resize());
   }
 
-  // Event listener for window resize
   window.addEventListener('resize', resizeCharts);
-
-  // Initial resize to ensure proper layout
   resizeCharts();
-</script>
 
-<script>
-  const bweOption = {
-    title: {
-      text: "Bwe",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: ["Acked", "Probe", "Delay", "Loss", "Bandwidth"],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "Acked",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Probe",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Delay",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Loss",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Bandwidth",
-        type: "line",
-        data: [],
-      },
-    ],
+  const commonOptions = {
+    tooltip: { trigger: "axis" },
+    dataZoom: [{ type: 'slider' }, { type: 'inside' }],
+    grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
+    toolbox: { feature: { saveAsImage: {} } },
+    xAxis: { type: "category", boundaryGap: false, data: [] },
+    yAxis: { type: "value" },
+    series: []
   };
 
-  const trendOption = {
-    title: {
-      text: "Trend",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: ["ThresholdUpper", "Trend", "ThresholdLower"],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "ThresholdUpper",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Trend",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "ThresholdLower",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const rttOption = {
-    title: {
-      text: "Rtt",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: ["Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance"],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "Rtt",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "MinRtt",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "UpDelay",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "SUpDelay",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Slope",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Variance",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const lossOption = {
-    title: {
-      text: "Loss",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: ["Loss"],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "Loss",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const rateOption = {
-    title: {
-      text: "Rate",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: ["Send", "Recv"],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "Send",
-        type: "line",
-        data: [],
-      },
-      {
-        name: "Recv",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const sendFrameRateOption = {
-    title: {
-      text: "SendFrameRate",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: [""],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "FrameRate",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const recvFrameRateOption = {
-    title: {
-      text: "RecvFrameRate",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: [""],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "FrameRate",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const nackCountOption = {
-    title: {
-      text: "Nack Count",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: [""],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "NackCount",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-
-  const nackDurationOption = {
-    title: {
-      text: "NackDuration",
-    },
-    tooltip: {
-      trigger: "axis",
-    },
-    legend: {
-      data: [""],
-    },
-    dataZoom: [
-      {
-        type: 'slider'
-      },
-      {
-        type: 'inside'
-      }
-    ],
-    grid: {
-      left: "3%",
-      right: "4%",
-      bottom: "3%",
-      containLabel: true,
-    },
-    toolbox: {
-      feature: {
-        saveAsImage: {}
-      }
-    },
-    xAxis: {
-      type: "category",
-      boundaryGap: false,
-      data: [],
-    },
-    yAxis: {
-      type: "value",
-    },
-    series: [
-      {
-        name: "NackDuration",
-        type: "line",
-        data: [],
-      },
-    ],
-  };
-</script>
-
-<script>
-  // 获取 option, 并更新图表
-  let ws = null
-  window.onload = connectWS()
-  // WebSocket消息回调处理函数
-  function parseResponse(response) {
-    //console.log("Response:", response)
-    if (response.success !== true) {
-      console.log("response not success")
-      return
-    }
-
-    const result = JSON.parse(response.payload)
-    //console.log("result:", result)
-    if (response.statsType === "bwe") {
-      bweOption.xAxis.data = result.xAxis
-      bweOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      bweEcharts.setOption(bweOption)
-    } else if (response.statsType === "trend") {
-      trendOption.xAxis.data = result.xAxis
-      trendOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      trendEcharts.setOption(trendOption)
-    } else if (response.statsType === "cost") {
-      if (response.streamId === 0) {
-        //cost0Echarts.setOption(result)
-      } else if (response.streamId === 1) {
-        //cost1Echarts.setOption(result)
-      }
-    } else if (response.statsType === "rtt") {
-      rttOption.xAxis.data = result.xAxis
-      rttOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      rttEcharts.setOption(rttOption)
-    } else if (response.statsType === "loss") {
-      lossOption.xAxis.data = result.xAxis
-      lossOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      lossEcharts.setOption(lossOption)
-    } else if (response.statsType === "rate") {
-      rateOption.xAxis.data = result.xAxis
-      rateOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      rateEcharts.setOption(rateOption)
-    } else if (response.statsType === "sendFrameRate") {
-      sendFrameRateOption.xAxis.data = result.xAxis
-      sendFrameRateOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      sendFrameRateEcharts.setOption(sendFrameRateOption)
-    } else if (response.statsType === "recvFrameRate") {
-      recvFrameRateOption.xAxis.data = result.xAxis
-      recvFrameRateOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      recvFrameRateEcharts.setOption(recvFrameRateOption)
-    } else if (response.statsType === "nackCount") {
-      nackCountOption.xAxis.data = result.xAxis
-      nackCountOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      nackCountEcharts.setOption(nackCountOption)
-    } else if (response.statsType === "nackDuration") {
-      nackDurationOption.xAxis.data = result.xAxis
-      nackDurationOption.series.forEach(function(serie, index) {
-        if (result.series[index]) { // 确保数据存在
-          serie.data = result.series[index];
-        }
-      });
-      nackDurationEcharts.setOption(nackDurationOption)
-    }
+  function setOption(chartId, option) {
+    const instance = echartsInstances[chartId];
+    instance.setOption({ ...commonOptions, ...option });
   }
 
-  // 连接WebSocket服务
+  let ws = null;
+  window.onload = connectWS();
+
+  function parseResponse(response) {
+    if (response.success !== true) return;
+    const result = JSON.parse(response.payload);
+    const option = {
+      title: { text: response.statsType },
+      legend: { data: result.legend },
+      xAxis: { data: result.xAxis },
+      series: result.series.map((data, index) => ({
+        name: result.legend[index],
+        type: result.seriesType[index],
+        data: data
+      }))
+    };
+    setOption(response.statsType, option);
+  }
+
   async function connectWS() {
     if (ws == null) {
       const ip = window.location.host;
       const queryString = window.location.search;
       const urlParams = new URLSearchParams(queryString);
       const id = urlParams.get('id');
-
-      ws = new WebSocket("ws://"+ip+"/ws/stats"+"?id="+id, "json")
-      console.log('***CREATED WEBSOCKET')
+      ws = new WebSocket(`ws://${ip}/ws/stats?id=${id}`);
     }
 
-    ws.onopen = function (evt) {
-      console.log('***ONOPEN')
-    }
-
-    // 注册WebSocket的消息回调处理函数
     ws.onmessage = function (evt) {
-      //console.log('***ONMESSAGE')
-      //console.log(evt.data)
-      //console.log(JSON.parse(evt.data))
-
-      parseResponse(JSON.parse(evt.data))
+      parseResponse(JSON.parse(evt.data));
     }
   }
 
-  // 关闭到WebSocket服务的连接
   function closeWS() {
-    ws.close()
+    ws.close();
   }
 </script>
 

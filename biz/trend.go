@@ -69,7 +69,9 @@ func (trend *TrendStatsSession) Incoming(msg []byte) {
 
 func (trend *TrendStatsSession) Draw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}},
+		Legend:     []string{"ThresholdUpper", "Trend", "ThresholdLower"},
+		Series:     [][]float64{{}, {}, {}},
+		SeriesType: []string{"line", "line", "line"},
 	}
 	trend.TrendStatsMutex.RLock()
 	for _, stats := range trend.TrendStatsQueue {

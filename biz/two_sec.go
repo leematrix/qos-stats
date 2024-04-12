@@ -122,7 +122,9 @@ func (tweSec *TwoSecStatsSession) ReceiverIncoming(msg []byte) {
 
 func (tweSec *TwoSecStatsSession) SenderFrameRateDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}},
+		Legend:     []string{""},
+		Series:     [][]float64{{}},
+		SeriesType: []string{"line"},
 	}
 	tweSec.SenderTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.SenderTwoSecStatsQueue {
@@ -135,7 +137,9 @@ func (tweSec *TwoSecStatsSession) SenderFrameRateDraw() ([]byte, error) {
 
 func (tweSec *TwoSecStatsSession) ReceiverFrameRateDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}},
+		Legend:     []string{""},
+		Series:     [][]float64{{}},
+		SeriesType: []string{"line"},
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
@@ -148,7 +152,9 @@ func (tweSec *TwoSecStatsSession) ReceiverFrameRateDraw() ([]byte, error) {
 
 func (tweSec *TwoSecStatsSession) NackCountDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}},
+		Legend:     []string{""},
+		Series:     [][]float64{{}},
+		SeriesType: []string{"line"},
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
@@ -161,7 +167,9 @@ func (tweSec *TwoSecStatsSession) NackCountDraw() ([]byte, error) {
 
 func (tweSec *TwoSecStatsSession) NackDurationDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}},
+		Legend:     []string{""},
+		Series:     [][]float64{{}},
+		SeriesType: []string{"line"},
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {

@@ -111,7 +111,9 @@ func (nse *NseStatsSession) Incoming(msg []byte) {
 
 func (nse *NseStatsSession) RttStatsDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}, {}, {}, {}, {}},
+		Legend:     []string{"Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance"},
+		Series:     [][]float64{{}, {}, {}, {}, {}, {}},
+		SeriesType: []string{"line", "line", "line", "line", "line", "line"},
 	}
 	nse.NseStatsMutex.RLock()
 	for _, stats := range nse.NseStatsQueue {
@@ -129,7 +131,9 @@ func (nse *NseStatsSession) RttStatsDraw() ([]byte, error) {
 
 func (nse *NseStatsSession) LossStatsDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}},
+		Legend:     []string{""},
+		Series:     [][]float64{{}},
+		SeriesType: []string{"line"},
 	}
 	nse.NseStatsMutex.RLock()
 	for _, stats := range nse.NseStatsQueue {
@@ -142,7 +146,9 @@ func (nse *NseStatsSession) LossStatsDraw() ([]byte, error) {
 
 func (nse *NseStatsSession) RateStatsDraw() ([]byte, error) {
 	data := statsData{
-		Series: [][]float64{{}, {}},
+		Legend:     []string{"Send", "Recv"},
+		Series:     [][]float64{{}, {}},
+		SeriesType: []string{"line", "line"},
 	}
 	nse.NseStatsMutex.RLock()
 	for _, stats := range nse.NseStatsQueue {
