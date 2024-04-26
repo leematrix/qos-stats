@@ -198,7 +198,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.Bwe.Draw()
-				err = respFun("bwe", -1, string(respData[:]), respErr == nil)
+				err = respFun("Bwe", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -215,7 +215,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.Trend.Draw()
-				err = respFun("trend", -1, string(respData[:]), respErr == nil)
+				err = respFun("Trend", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -255,7 +255,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.Nse.RttStatsDraw()
-				err = respFun("rtt", 255, string(respData[:]), respErr == nil)
+				err = respFun("Rtt", 255, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -272,7 +272,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.Nse.LossStatsDraw()
-				err = respFun("loss", -1, string(respData[:]), respErr == nil)
+				err = respFun("Loss", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -289,7 +289,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.Nse.RateStatsDraw()
-				err = respFun("rate", -1, string(respData[:]), respErr == nil)
+				err = respFun("Rate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -306,7 +306,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.TwoSec.SenderFrameRateDraw()
-				err = respFun("sendFrameRate", -1, string(respData[:]), respErr == nil)
+				err = respFun("SendFrameRate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -323,7 +323,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.TwoSec.ReceiverFrameRateDraw()
-				err = respFun("recvFrameRate", -1, string(respData[:]), respErr == nil)
+				err = respFun("RecvFrameRate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -340,7 +340,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.TwoSec.NackCountDraw()
-				err = respFun("nackCount", -1, string(respData[:]), respErr == nil)
+				err = respFun("NackCount", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
@@ -356,8 +356,59 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := sess.TwoSec.NackDurationDraw()
-				err = respFun("nackDuration", -1, string(respData[:]), respErr == nil)
+				respData, respErr := sess.TwoSec.NackCostDraw()
+				err = respFun("NackCost", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// SendSize
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.SendSizeDraw()
+				err = respFun("SendSize", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// SendCount
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.SendCountDraw()
+				err = respFun("SendCount", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// RecvCount
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.RecvCountDraw()
+				err = respFun("RecvCount", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}

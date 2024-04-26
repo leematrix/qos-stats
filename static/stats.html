@@ -29,22 +29,24 @@
 <body>
 
 <div class="container">
-  <div class="item" id="bwe"></div>
-  <div class="item" id="trend"></div>
-  <div class="item" id="rtt"></div>
-  <div class="item" id="loss"></div>
-  <div class="item" id="rate"></div>
-  <div class="item" id="sendFrameRate"></div>
-  <div class="item" id="recvFrameRate"></div>
-  <div class="item" id="nackCount"></div>
-  <div class="item" id="nackDuration"></div>
-  <div class="item" id="cost0"></div>
-  <div class="item" id="cost1"></div>
+  <div class="item" id="Bwe"></div>
+  <div class="item" id="Trend"></div>
+  <div class="item" id="Rtt"></div>
+  <div class="item" id="Loss"></div>
+  <div class="item" id="Rate"></div>
+  <div class="item" id="SendFrameRate"></div>
+  <div class="item" id="RecvFrameRate"></div>
+  <div class="item" id="NackCount"></div>
+  <div class="item" id="NackCost"></div>
+  <div class="item" id="SendSize"></div>
+  <div class="item" id="SendCount"></div>
+  <div class="item" id="RecvCount"></div>
 </div>
 
 <script type="text/javascript">
   const echartsInstances = {};
-  const chartIds = ['bwe', 'trend', 'rtt', 'loss', 'rate', 'sendFrameRate', 'recvFrameRate', 'nackCount', 'nackDuration', 'cost0', 'cost1'];
+  const chartIds = ['Bwe', 'Trend', 'Rtt', 'Loss', 'Rate', 'SendFrameRate', 'RecvFrameRate', 'NackCount',
+    'NackCost', 'SendSize', 'SendCount', 'RecvCount'];
   chartIds.forEach(id => {
     echartsInstances[id] = echarts.init(document.getElementById(id));
   });

@@ -11,10 +11,16 @@ import (
 )
 
 type SenderTwoSecStats struct {
-	StreamID    float64
-	FrameRate   float64
-	CollectTime float64
-	CreateTime  int64
+	StreamID        float64
+	FrameRate       float64
+	CollectTime     float64
+	MediaCount      float64
+	MediaSize       float64
+	RetransmitCount float64
+	RetransmitSize  float64
+	FecCount        float64
+	FecSize         float64
+	CreateTime      int64
 }
 
 type ReceiverTwoSecStats struct {
@@ -23,6 +29,9 @@ type ReceiverTwoSecStats struct {
 	MaxRetryCount    float64
 	MaxRetryDuration float64
 	CollectTime      float64
+	MediaCount       float64
+	RetransmitCount  float64
+	FecRecoveryCount float64
 	CreateTime       int64
 }
 
@@ -67,6 +76,24 @@ func (tweSec *TwoSecStatsSession) Run(ctx context.Context) {
 			stats.CollectTime = float64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
 
+			stats.MediaSize = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.MediaCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.RetransmitSize = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.RetransmitCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.FecSize = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.FecCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
 			tweSec.SenderTwoSecStatsMutex.Lock()
 			tweSec.SenderTwoSecStatsQueue = append(tweSec.SenderTwoSecStatsQueue, stats)
 			if len(tweSec.SenderTwoSecStatsQueue) > conf.StatsWindowsCount {
@@ -94,6 +121,15 @@ func (tweSec *TwoSecStatsSession) Run(ctx context.Context) {
 
 			stats.CollectTime = float64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
+
+			stats.MediaCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.RetransmitCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
+
+			stats.FecRecoveryCount = float64(binary.BigEndian.Uint32(msg[index:]))
+			index += 4
 
 			tweSec.ReceiverTwoSecStatsMutex.Lock()
 			tweSec.ReceiverTwoSecStatsQueue = append(tweSec.ReceiverTwoSecStatsQueue, stats)
@@ -165,7 +201,7 @@ func (tweSec *TwoSecStatsSession) NackCountDraw() ([]byte, error) {
 	return json.Marshal(data)
 }
 
-func (tweSec *TwoSecStatsSession) NackDurationDraw() ([]byte, error) {
+func (tweSec *TwoSecStatsSession) NackCostDraw() ([]byte, error) {
 	data := statsData{
 		Legend:     []string{""},
 		Series:     [][]float64{{}},
@@ -175,6 +211,57 @@ func (tweSec *TwoSecStatsSession) NackDurationDraw() ([]byte, error) {
 	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], stats.MaxRetryDuration)
+	}
+	tweSec.ReceiverTwoSecStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func (tweSec *TwoSecStatsSession) SendSizeDraw() ([]byte, error) {
+	data := statsData{
+		Legend:     []string{"Media", "Retransmit", "Fec"},
+		Series:     [][]float64{{}, {}, {}},
+		SeriesType: []string{"line", "line", "line"},
+	}
+	tweSec.SenderTwoSecStatsMutex.RLock()
+	for _, stats := range tweSec.SenderTwoSecStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.MediaSize)
+		data.Series[1] = append(data.Series[1], stats.RetransmitSize)
+		data.Series[2] = append(data.Series[2], stats.FecSize)
+	}
+	tweSec.SenderTwoSecStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func (tweSec *TwoSecStatsSession) SendCountDraw() ([]byte, error) {
+	data := statsData{
+		Legend:     []string{"Media", "Retransmit", "Fec"},
+		Series:     [][]float64{{}, {}, {}},
+		SeriesType: []string{"line", "line", "line"},
+	}
+	tweSec.SenderTwoSecStatsMutex.RLock()
+	for _, stats := range tweSec.SenderTwoSecStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.MediaCount)
+		data.Series[1] = append(data.Series[1], stats.RetransmitCount)
+		data.Series[2] = append(data.Series[2], stats.FecCount)
+	}
+	tweSec.SenderTwoSecStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func (tweSec *TwoSecStatsSession) RecvCountDraw() ([]byte, error) {
+	data := statsData{
+		Legend:     []string{"Media", "Retransmit", "Fec"},
+		Series:     [][]float64{{}, {}, {}},
+		SeriesType: []string{"line", "line", "line"},
+	}
+	tweSec.ReceiverTwoSecStatsMutex.RLock()
+	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.MediaCount)
+		data.Series[1] = append(data.Series[1], stats.RetransmitCount)
+		data.Series[2] = append(data.Series[2], stats.FecRecoveryCount)
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RUnlock()
 	return json.Marshal(data)
