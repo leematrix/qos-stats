@@ -373,8 +373,8 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			ticker := time.NewTicker(500 * time.Millisecond)
 			select {
 			case <-ticker.C:
-				respData, respErr := sess.TwoSec.SendSizeDraw()
-				err = respFun("SendSize", -1, string(respData[:]), respErr == nil)
+				respData, respErr := sess.TwoSec.SendRateDraw()
+				err = respFun("SendRate", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}

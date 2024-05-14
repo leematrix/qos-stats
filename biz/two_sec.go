@@ -216,7 +216,7 @@ func (tweSec *TwoSecStatsSession) NackCostDraw() ([]byte, error) {
 	return json.Marshal(data)
 }
 
-func (tweSec *TwoSecStatsSession) SendSizeDraw() ([]byte, error) {
+func (tweSec *TwoSecStatsSession) SendRateDraw() ([]byte, error) {
 	data := statsData{
 		Legend:     []string{"Media", "Retransmit", "Fec"},
 		Series:     [][]float64{{}, {}, {}},
@@ -225,9 +225,9 @@ func (tweSec *TwoSecStatsSession) SendSizeDraw() ([]byte, error) {
 	tweSec.SenderTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.SenderTwoSecStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
-		data.Series[0] = append(data.Series[0], stats.MediaSize)
-		data.Series[1] = append(data.Series[1], stats.RetransmitSize)
-		data.Series[2] = append(data.Series[2], stats.FecSize)
+		data.Series[0] = append(data.Series[0], stats.MediaSize/250)
+		data.Series[1] = append(data.Series[1], stats.RetransmitSize/250)
+		data.Series[2] = append(data.Series[2], stats.FecSize/250)
 	}
 	tweSec.SenderTwoSecStatsMutex.RUnlock()
 	return json.Marshal(data)

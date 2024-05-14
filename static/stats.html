@@ -38,7 +38,7 @@
   <div class="item" id="RecvFrameRate"></div>
   <div class="item" id="NackCount"></div>
   <div class="item" id="NackCost"></div>
-  <div class="item" id="SendSize"></div>
+  <div class="item" id="SendRate"></div>
   <div class="item" id="SendCount"></div>
   <div class="item" id="RecvCount"></div>
 </div>
@@ -46,7 +46,7 @@
 <script type="text/javascript">
   const echartsInstances = {};
   const chartIds = ['Bwe', 'Trend', 'Rtt', 'Loss', 'Rate', 'SendFrameRate', 'RecvFrameRate', 'NackCount',
-    'NackCost', 'SendSize', 'SendCount', 'RecvCount'];
+    'NackCost', 'SendRate', 'SendCount', 'RecvCount'];
   chartIds.forEach(id => {
     echartsInstances[id] = echarts.init(document.getElementById(id));
   });
@@ -60,7 +60,7 @@
 
   const commonOptions = {
     tooltip: { trigger: "axis" },
-    dataZoom: [{ type: 'slider' }, { type: 'inside' }],
+    dataZoom: [{ type: 'inside' }],
     grid: { left: "3%", right: "4%", bottom: "3%", containLabel: true },
     toolbox: { feature: { saveAsImage: {} } },
     xAxis: { type: "category", boundaryGap: false, data: [] },
