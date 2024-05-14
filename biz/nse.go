@@ -111,19 +111,15 @@ func (nse *NseStatsSession) Incoming(msg []byte) {
 
 func (nse *NseStatsSession) RttStatsDraw() ([]byte, error) {
 	data := statsData{
-		Legend:     []string{"Rtt", "MinRtt", "UpDelay", "SUpDelay", "Slope", "Variance"},
-		Series:     [][]float64{{}, {}, {}, {}, {}, {}},
-		SeriesType: []string{"line", "line", "line", "line", "line", "line"},
+		Legend:     []string{"Rtt", "SRtt"},
+		Series:     [][]float64{{}, {}},
+		SeriesType: []string{"line", "line"},
 	}
 	nse.NseStatsMutex.RLock()
 	for _, stats := range nse.NseStatsQueue {
 		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
 		data.Series[0] = append(data.Series[0], float64(stats.Rtt))
-		data.Series[1] = append(data.Series[1], float64(stats.MinRtt))
-		data.Series[2] = append(data.Series[2], float64(stats.UpDelay))
-		data.Series[3] = append(data.Series[3], float64(stats.SUpDelay))
-		data.Series[4] = append(data.Series[4], stats.Slope)
-		data.Series[5] = append(data.Series[5], stats.Variance)
+		data.Series[1] = append(data.Series[1], float64(stats.SRtt))
 	}
 	nse.NseStatsMutex.RUnlock()
 	return json.Marshal(data)
