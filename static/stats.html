@@ -31,6 +31,7 @@
 <div class="container">
   <div class="item" id="Bwe"></div>
   <div class="item" id="Trend"></div>
+  <div class="item" id="Bwa"></div>
   <div class="item" id="Rtt"></div>
   <div class="item" id="Loss"></div>
   <div class="item" id="Rate"></div>
@@ -45,8 +46,8 @@
 
 <script type="text/javascript">
   const echartsInstances = {};
-  const chartIds = ['Bwe', 'Trend', 'Rtt', 'Loss', 'Rate', 'SendFrameRate', 'RecvFrameRate', 'NackCount',
-    'NackCost', 'SendRate', 'SendCount', 'RecvCount'];
+  const chartIds = ['Bwe', 'Trend', 'Bwa', 'Rtt', 'Loss', 'Rate', 'SendFrameRate',
+    'RecvFrameRate', 'NackCount', 'NackCost', 'SendRate', 'SendCount', 'RecvCount'];
   chartIds.forEach(id => {
     echartsInstances[id] = echarts.init(document.getElementById(id));
   });

@@ -19,6 +19,7 @@ const (
 	TypeNSEStats            = 4
 	TypeSenderTwoSecStats   = 5
 	TypeReceiverTwoSecStats = 6
+	TypeBwaStats            = 7
 	TypeReset               = 255
 )
 
@@ -30,12 +31,14 @@ type StatsSession struct {
 	Trend     *TrendStatsSession
 	Nse       *NseStatsSession
 	TwoSec    *TwoSecStatsSession
+	Bwa       *BwaStatsSession
 }
 
 func StatsSessionCreate(SessionID string) *StatsSession {
 	session := &StatsSession{
 		SessionID: SessionID,
 		Bwe:       BweStatsSessionCreate(),
+		Bwa:       BwaStatsSessionCreate(),
 		Trend:     TrendStatsSessionCreate(),
 		Nse:       NseStatsSessionCreate(),
 		TwoSec:    TwoStatsSessionCreate(),
@@ -47,6 +50,7 @@ func StatsSessionCreate(SessionID string) *StatsSession {
 func (sess *StatsSession) Start() {
 	sess.context, sess.cancel = context.WithCancel(context.Background())
 	go sess.Bwe.Run(sess.context)
+	go sess.Bwa.Run(sess.context)
 	go sess.Trend.Run(sess.context)
 	go sess.Nse.Run(sess.context)
 	go sess.TwoSec.Run(sess.context)
@@ -409,6 +413,23 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			case <-ticker.C:
 				respData, respErr := sess.TwoSec.RecvCountDraw()
 				err = respFun("RecvCount", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
+	// Bwa
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.Bwa.Draw()
+				err = respFun("Bwa", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}

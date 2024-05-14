@@ -68,6 +68,8 @@ func StatsServerStart() {
 				sess.TwoSec.SenderIncoming(buf[index+1:])
 			case biz.TypeReceiverTwoSecStats:
 				sess.TwoSec.ReceiverIncoming(buf[index+1:])
+			case biz.TypeBwaStats:
+				sess.Bwa.Incoming(buf[index+1:])
 			case biz.TypeReset:
 				sess.Reset()
 				log.Println("Reset stats.")
