@@ -439,6 +439,23 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
+	// Jitter
+	eg.Go(func() error {
+		for {
+			ticker := time.NewTicker(500 * time.Millisecond)
+			select {
+			case <-ticker.C:
+				respData, respErr := sess.TwoSec.JitterDraw()
+				err = respFun("jitter", -1, string(respData[:]), respErr == nil)
+				if err != nil {
+					return err
+				}
+			case <-ctx.Done():
+				return nil
+			}
+		}
+	})
+
 	if err = eg.Wait(); err != nil {
 		return
 	}

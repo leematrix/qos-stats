@@ -32,6 +32,15 @@ type ReceiverTwoSecStats struct {
 	MediaCount       float64
 	RetransmitCount  float64
 	FecRecoveryCount float64
+	StutterCount     float64
+	DropFrameCount   float64 // 丢帧次数
+	StutterDuration  float64 // 最大卡顿时长
+	MaxBufferLength  float64 // 最大缓冲长度
+	MinBufferLength  float64 // 最小缓冲长度
+	AvgBufferLength  float64 // 平均缓冲长度
+	MaxJitterDelay   float64 // 最大抖动延迟
+	MinJitterDelay   float64 // 最小抖动延迟
+	MediaTimeMs      float64 // 媒体时间戳
 	CreateTime       int64
 }
 
@@ -130,6 +139,33 @@ func (tweSec *TwoSecStatsSession) Run(ctx context.Context) {
 
 			stats.FecRecoveryCount = float64(binary.BigEndian.Uint32(msg[index:]))
 			index += 4
+
+			stats.StutterCount = float64(msg[index])
+			index += 1
+
+			stats.DropFrameCount = float64(msg[index])
+			index += 1
+
+			stats.StutterDuration = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.MaxBufferLength = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.MinBufferLength = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.AvgBufferLength = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.MaxJitterDelay = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.MinJitterDelay = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
+
+			stats.MediaTimeMs = float64(binary.BigEndian.Uint64(msg[index:]))
+			index += 8
 
 			tweSec.ReceiverTwoSecStatsMutex.Lock()
 			tweSec.ReceiverTwoSecStatsQueue = append(tweSec.ReceiverTwoSecStatsQueue, stats)
@@ -262,6 +298,29 @@ func (tweSec *TwoSecStatsSession) RecvCountDraw() ([]byte, error) {
 		data.Series[0] = append(data.Series[0], stats.MediaCount)
 		data.Series[1] = append(data.Series[1], stats.RetransmitCount)
 		data.Series[2] = append(data.Series[2], stats.FecRecoveryCount)
+	}
+	tweSec.ReceiverTwoSecStatsMutex.RUnlock()
+	return json.Marshal(data)
+}
+
+func (tweSec *TwoSecStatsSession) JitterDraw() ([]byte, error) {
+	data := statsData{
+		Legend:     []string{"StutterCount", "StutterDuration", "DropFrameCount", "MaxBufferLength", "MinBufferLength", "AvgBufferLength", "MaxJitterDelay", "MinJitterDelay", "MediaTimeMs"},
+		Series:     [][]float64{{}, {}, {}, {}, {}, {}, {}, {}, {}},
+		SeriesType: []string{"line", "line", "line", "line", "line", "line", "line", "line", "line"},
+	}
+	tweSec.ReceiverTwoSecStatsMutex.RLock()
+	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
+		data.XAxis = append(data.XAxis, time.Unix(stats.CreateTime, 0).Format("15:04:05"))
+		data.Series[0] = append(data.Series[0], stats.StutterCount)
+		data.Series[1] = append(data.Series[1], stats.StutterDuration)
+		data.Series[2] = append(data.Series[2], stats.DropFrameCount)
+		data.Series[3] = append(data.Series[3], stats.MaxBufferLength)
+		data.Series[4] = append(data.Series[4], stats.MinBufferLength)
+		data.Series[5] = append(data.Series[5], stats.AvgBufferLength)
+		data.Series[6] = append(data.Series[6], stats.MaxJitterDelay)
+		data.Series[7] = append(data.Series[7], stats.MinJitterDelay)
+		data.Series[8] = append(data.Series[8], stats.MediaTimeMs)
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RUnlock()
 	return json.Marshal(data)
