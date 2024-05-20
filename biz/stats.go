@@ -446,7 +446,7 @@ func WsStats(w http.ResponseWriter, r *http.Request) {
 			select {
 			case <-ticker.C:
 				respData, respErr := sess.TwoSec.JitterDraw()
-				err = respFun("jitter", -1, string(respData[:]), respErr == nil)
+				err = respFun("Jitter", -1, string(respData[:]), respErr == nil)
 				if err != nil {
 					return err
 				}
