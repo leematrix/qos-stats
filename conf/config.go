@@ -7,4 +7,4 @@ var TraceEnable = false
 var TraceDomainName = ""
 var TracePort = 443
 var TraceAuth = ""
-var StatsToken = "qos"
+var StatsToken = ""
