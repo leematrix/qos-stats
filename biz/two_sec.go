@@ -41,6 +41,7 @@ type ReceiverTwoSecStats struct {
 	MaxJitterDelay   float64 // 最大抖动延迟
 	MinJitterDelay   float64 // 最小抖动延迟
 	MediaTimeMs      float64 // 媒体时间戳
+	MaxWaitTime      float64
 	CreateTime       int64
 }
 
@@ -166,6 +167,9 @@ func (tweSec *TwoSecStatsSession) Run(ctx context.Context) {
 
 			stats.MediaTimeMs = float64(binary.BigEndian.Uint64(msg[index:]))
 			index += 8
+
+			stats.MaxWaitTime = float64(binary.BigEndian.Uint16(msg[index:]))
+			index += 2
 
 			tweSec.ReceiverTwoSecStatsMutex.Lock()
 			tweSec.ReceiverTwoSecStatsQueue = append(tweSec.ReceiverTwoSecStatsQueue, stats)
@@ -305,9 +309,10 @@ func (tweSec *TwoSecStatsSession) RecvCountDraw() ([]byte, error) {
 
 func (tweSec *TwoSecStatsSession) JitterDraw() ([]byte, error) {
 	data := statsData{
-		Legend:     []string{"StutterCount", "StutterDuration", "DropFrameCount", "MaxBufferLength", "MinBufferLength", "AvgBufferLength", "MaxJitterDelay", "MinJitterDelay", "MediaTimeMs"},
-		Series:     [][]float64{{}, {}, {}, {}, {}, {}, {}, {}, {}},
-		SeriesType: []string{"line", "line", "line", "line", "line", "line", "line", "line", "line"},
+		Legend: []string{"StutterCount", "StutterDuration", "DropFrameCount", "MaxBufferLength",
+			"MinBufferLength", "AvgBufferLength", "MaxJitterDelay", "MinJitterDelay", "MediaTimeMs", "MaxWaitTime"},
+		Series:     [][]float64{{}, {}, {}, {}, {}, {}, {}, {}, {}, {}},
+		SeriesType: []string{"line", "line", "line", "line", "line", "line", "line", "line", "line", "line"},
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RLock()
 	for _, stats := range tweSec.ReceiverTwoSecStatsQueue {
@@ -321,6 +326,7 @@ func (tweSec *TwoSecStatsSession) JitterDraw() ([]byte, error) {
 		data.Series[6] = append(data.Series[6], stats.MaxJitterDelay)
 		data.Series[7] = append(data.Series[7], stats.MinJitterDelay)
 		data.Series[8] = append(data.Series[8], stats.MediaTimeMs)
+		data.Series[9] = append(data.Series[9], stats.MaxWaitTime)
 	}
 	tweSec.ReceiverTwoSecStatsMutex.RUnlock()
 	return json.Marshal(data)
